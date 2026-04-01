@@ -81,28 +81,28 @@ Requirements for initial release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FEAS-01 | — | Pending |
-| FEAS-02 | — | Pending |
-| AUDIO-01 | — | Pending |
-| AUDIO-02 | — | Pending |
-| BT-01 | — | Pending |
-| BT-02 | — | Pending |
-| BT-03 | — | Pending |
-| SVC-01 | — | Pending |
-| SVC-02 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
+| FEAS-01 | Phase 1 | Pending |
+| FEAS-02 | Phase 1 | Pending |
+| AUDIO-01 | Phase 3 | Pending |
+| AUDIO-02 | Phase 2 | Pending |
+| BT-01 | Phase 2 | Pending |
+| BT-02 | Phase 2 | Pending |
+| BT-03 | Phase 2 | Pending |
+| SVC-01 | Phase 2 | Pending |
+| SVC-02 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| UI-01 | Phase 3 | Pending |
+| UI-02 | Phase 3 | Pending |
+| UI-03 | Phase 3 | Pending |
+| UI-04 | Phase 3 | Pending |
+| UI-05 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 after roadmap creation — traceability complete*
