@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. An Android emulator boots and runs a Hello World app
   3. A physical Android device is recognized by ADB (`adb devices` lists it)
   4. A debug APK can be installed and launched on the physical device via USB
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 00-01-PLAN.md — Install JDK/SDK and create Kotlin/Compose project skeleton with successful build
 - [ ] 00-02-PLAN.md — Set up emulator and verify physical device deployment
@@ -74,7 +74,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Dev Environment | 0/2 | Planning complete | - |
+| 0. Dev Environment | 1/2 | In Progress|  |
 | 1. AudioEffect POC | 0/? | Not started | - |
 | 2. Service + Persistence | 0/? | Not started | - |
 | 3. UI | 0/? | Not started | - |

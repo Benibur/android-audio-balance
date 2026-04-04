@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 0 context gathered
-last_updated: "2026-04-04T09:09:46.102Z"
-last_activity: 2026-04-01 — Roadmap created, phases derived from requirements
+status: in-progress
+stopped_at: Completed 00-01-PLAN.md
+last_updated: "2026-04-04T19:20:00Z"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,34 +19,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement — sans intervention manuelle
-**Current focus:** Phase 0 — Dev Environment
+**Current focus:** Phase 00 — dev-environment
 
 ## Current Position
 
-Phase: 0 of 3 (Dev Environment)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-04-01 — Roadmap created, phases derived from requirements
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 00 (dev-environment) — EXECUTING
+Plan: 2 of 2 (plan 01 complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 67 min
+- Total execution time: ~1.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 00-dev-environment | 1/2 | 67 min | 67 min |
 
 **Recent Trend:**
 
-- Last 5 plans: —
+- Last 5 plans: 67 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -62,6 +56,9 @@ Recent decisions affecting current work:
 
 - Roadmap: Phase 1 is a hard gate — AudioEffect session 0 must be validated on physical hardware before Phase 2 service work begins. If session 0 is silently blocked, Phase 2 `AudioEffectManager` switches to per-session-ID Map approach instead of single instance.
 - Stack: KSP version must exactly match Kotlin version (`2.3.10-2.0.0`); AGP 9.1.0 requires Android Studio Otter 3 Feature Drop or later.
+- 00-01: AGP 8.7.3 + Gradle 8.9 chosen over AGP 9.x — stable with Kotlin 2.0.21, avoids Android Studio Otter 3 requirement
+- 00-01: Version catalog (gradle/libs.versions.toml) established as single source of truth for all dep versions — all future phases add deps here
+- 00-01: minSdk=26 (Android 8.0+), targetSdk=35, package com.audiobalance.app established as project constants
 
 ### Pending Todos
 
@@ -74,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T09:09:46.096Z
-Stopped at: Phase 0 context gathered
-Resume file: .planning/phases/00-dev-environment/00-CONTEXT.md
+Last session: 2026-04-04T19:20:00Z
+Stopped at: Completed 00-01-PLAN.md — dev toolchain + project skeleton
+Resume file: .planning/phases/00-dev-environment/00-02-PLAN.md
