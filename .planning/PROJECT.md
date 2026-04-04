@@ -60,4 +60,4 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 | Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | — Pending |
 
 ---
-*Last updated: 2026-04-01 after initialization*
+*Last updated: 2026-04-04 after Phase 0 (Dev Environment) complete*
