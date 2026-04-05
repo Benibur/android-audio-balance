@@ -13,7 +13,7 @@ Four phases from zero to working app: dev environment first (Phase 0), then a fo
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Dev Environment** - Android Studio, SDK, emulator, ADB setup — everything needed to build and deploy (completed 2026-04-04)
-- [ ] **Phase 1: AudioEffect POC** - Validate that balance can be applied system-wide on target hardware before any service work
+- [x] **Phase 1: AudioEffect POC** - Validate that balance can be applied system-wide on target hardware before any service work (completed 2026-04-05)
 - [ ] **Phase 2: Service + Persistence** - Foreground service, BT detection, DataStore persistence, and balance application wired together
 - [ ] **Phase 3: UI** - Compose screens for device list, balance sliders, toggles, and permission flows
 
@@ -79,6 +79,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
-| 1. AudioEffect POC | 2/3 | In Progress|  |
+| 1. AudioEffect POC | 3/3 | Complete   | 2026-04-05 |
 | 2. Service + Persistence | 0/? | Not started | - |
 | 3. UI | 0/? | Not started | - |
