@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-audioeffect-poc plan 01 (01-01-PLAN.md) — FEAS-01 validated
-last_updated: "2026-04-05T10:05:00.621Z"
+stopped_at: Plan 01-02 complete, FEAS-02 validated via session 0 global DP
+last_updated: "2026-04-05T19:04:39.998Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -48,6 +48,7 @@ Plan: 2 of 3
 *Updated after each plan completion*
 | Phase 00-dev-environment P02 | 25 | 2 tasks | 1 files |
 | Phase 01-audioeffect-poc P01 | 90 | 3 tasks | 6 files |
+| Phase 01-audioeffect-poc P02 | 180 | 5 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 01-01]: FEAS-01 VALIDATED on Pixel 10 / Android 16 / API 36: DynamicsProcessing on mediaPlayer.audioSessionId produces audible balance shift
 - [Phase 01-01]: Session 15521 (mediaPlayer.audioSessionId) was used, not global session 0 — session 0 for external apps (Spotify) is a separate code path tested in Plan 01-02
 - [Phase 01-01]: Balance -60dB on attenuated channel is clearly audible; this is the validated pattern for Phase 2 AudioEffectManager
+- [Phase 01-02]: FEAS-02 VALIDATED: DynamicsProcessing(0, 0, config) on session 0 LITERAL shifts audio to L or R ear on Deezer/YouTube — Phase 2 uses single-instance global approach
+- [Phase 01-02]: Minimal DP Config mandatory for session 0 global: all stages (preEq, mbc, postEq, limiter) must be false — any enabled stage with 0 bands silences the global mix
+- [Phase 01-02]: GlobalDpHolder singleton required for Activity-recreation-safe effect lifetime — store in object or foreground service, never in Activity member field
 
 ### Pending Todos
 
@@ -79,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T10:05:00.619Z
-Stopped at: Completed 01-audioeffect-poc plan 01 (01-01-PLAN.md) — FEAS-01 validated
-Resume file: None
+Last session: 2026-04-05T19:04:27.289Z
+Stopped at: Plan 01-02 complete, FEAS-02 validated via session 0 global DP
+Resume file: .planning/phases/01-audioeffect-poc/01-02-SUMMARY.md

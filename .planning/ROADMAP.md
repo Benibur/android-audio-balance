@@ -79,6 +79,6 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
-| 1. AudioEffect POC | 1/3 | In Progress|  |
+| 1. AudioEffect POC | 2/3 | In Progress|  |
 | 2. Service + Persistence | 0/? | Not started | - |
 | 3. UI | 0/? | Not started | - |

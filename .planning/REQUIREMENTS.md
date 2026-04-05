@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Feasibility
 
 - [x] **FEAS-01**: AudioEffect session 0 applique un offset de balance stéréo gauche/droite mesurable sur le device physique de test
-- [ ] **FEAS-02**: L'approche de fallback est identifiée si session 0 échoue (AccessibilityService, DUMP permission, ou per-session)
+- [x] **FEAS-02**: L'approche de fallback est identifiée si session 0 échoue (AccessibilityService, DUMP permission, ou per-session)
 
 ### Audio
 
@@ -82,7 +82,7 @@ Requirements for initial release. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FEAS-01 | Phase 1 | Complete |
-| FEAS-02 | Phase 1 | Pending |
+| FEAS-02 | Phase 1 | Complete |
 | AUDIO-01 | Phase 3 | Pending |
 | AUDIO-02 | Phase 2 | Pending |
 | BT-01 | Phase 2 | Pending |
