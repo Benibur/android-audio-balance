@@ -41,7 +41,11 @@ Plans:
   1. A standalone Kotlin script or minimal Activity applies AudioEffect session 0 and produces a measurable left/right balance shift on the physical device
   2. If session 0 is silently blocked, the per-session-ID fallback path (ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION) is identified and produces an audible balance shift instead
   3. The exact AudioEffect constructor call, band manipulation strategy, and error handling pattern are documented as the confirmed implementation approach for Phase 2
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — POC Activity: DynamicsProcessing session 0 with internal audio + ear-test (FEAS-01)
+- [ ] 01-02-PLAN.md — External audio + fallback chain (per-session, broadcast, LoudnessEnhancer) + ear-test (FEAS-02)
+- [ ] 01-03-PLAN.md — Write POC-RESULTS.md documenting confirmed approach for Phase 2
 
 ### Phase 2: Service + Persistence
 **Goal**: The app silently monitors Bluetooth A2DP connections, persists per-device balance coefficients, and applies the correct balance automatically when a known device connects — all while running as a foreground service
