@@ -36,7 +36,7 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 ## Context
 
 - **Motivation** : Écouteurs BT personnels avec balance stéréo déséquilibrée d'usine
-- **Difficulté technique principale** : Pas d'API native Android pour la balance stéréo globale post-Android 10. Approches possibles : AudioEffect sur session 0 (dépréciée mais souvent fonctionnelle), AccessibilityService, ou fallback per-app
+- **Difficulté technique principale** : ~~Pas d'API native Android pour la balance stéréo globale post-Android 10~~ **RÉSOLU en Phase 1** : `DynamicsProcessing(0, 0, config)` avec session ID = 0 littéral fonctionne sur Pixel 10 / Android 16. Voir `.planning/phases/01-audioeffect-poc/POC-RESULTS.md` pour le pattern exact.
 - **Méthodologie** : Étude de faisabilité technique (recherche + POC si incertitude) avant le développement, pour valider l'approche de balance globale
 - **Stack** : Kotlin, Jetpack Compose, Android 8+ (API 26+)
 - **Environnement** : Android Studio, émulateur + device physique USB pour tests
@@ -60,4 +60,4 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 | Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | — Pending |
 
 ---
-*Last updated: 2026-04-04 after Phase 0 (Dev Environment) complete*
+*Last updated: 2026-04-05 after Phase 1 (AudioEffect POC) complete — FEAS-01/FEAS-02 validated, session 0 global approach confirmed*
