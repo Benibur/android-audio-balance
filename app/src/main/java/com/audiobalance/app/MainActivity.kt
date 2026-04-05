@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.util.Log
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -74,7 +76,11 @@ class MainActivity : ComponentActivity() {
                     val logLines = remember { mutableStateListOf<String>() }
 
                     fun ts(): String = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-                    fun log(msg: String) { logLines.add("[${ts()}] $msg") }
+                    fun log(msg: String) {
+                        val entry = "[${ts()}] $msg"
+                        logLines.add(entry)
+                        Log.d("POC", entry)
+                    }
 
                     DisposableEffect(Unit) {
                         onDispose {
@@ -181,11 +187,13 @@ class MainActivity : ComponentActivity() {
                             Text("Full Right")
                         }
 
-                        Text(
-                            text = "--- Log ---\n$logText",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = "--- Log ---\n$logText",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
 
                         // ================================================================
                         // PLAN 02 — External audio fallbacks
@@ -482,14 +490,10 @@ class MainActivity : ComponentActivity() {
                             text = "--- Event log ---",
                             style = MaterialTheme.typography.labelMedium
                         )
-                        if (logLines.isEmpty()) {
+                        SelectionContainer {
                             Text(
-                                text = "(no events yet)",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        } else {
-                            Text(
-                                text = logLines.takeLast(30).joinToString("\n"),
+                                text = if (logLines.isEmpty()) "(no events yet)"
+                                       else logLines.takeLast(30).joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

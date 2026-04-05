@@ -90,7 +90,7 @@ class AudioEffectPoc {
             "Global DP session=0 created OK | setEnabled=$enabled | hasControl=$hasControl | channelCount=$channelCount"
         } catch (t: Throwable) {
             "Global DP session=0 FAILED: ${t.javaClass.simpleName}: ${t.message}"
-        }
+        }.also { Log.d("POC", it) }
     }
 
     /**
@@ -109,18 +109,26 @@ class AudioEffectPoc {
     }
 
     fun applyGlobalBalance(leftDb: Float, rightDb: Float): String {
-        val dp = globalDp ?: return "Global DP not created yet — tap 'Attach DP session 0 GLOBAL' first"
-        return try {
-            val channelCount = probeChannelCount(dp)
-            if (channelCount < 2) {
-                return "Global DP has only $channelCount channel(s) — balance impossible on mono"
+        val result: String
+        val dp = globalDp
+        if (dp == null) {
+            result = "Global DP not created yet — tap 'Attach DP session 0 GLOBAL' first"
+        } else {
+            result = try {
+                val channelCount = probeChannelCount(dp)
+                if (channelCount < 2) {
+                    "Global DP has only $channelCount channel(s) — balance impossible on mono"
+                } else {
+                    dp.setInputGainbyChannel(0, leftDb)   // channel 0 = left
+                    dp.setInputGainbyChannel(1, rightDb)  // channel 1 = right
+                    "Global balance applied: L=${leftDb}dB R=${rightDb}dB (channels=$channelCount)"
+                }
+            } catch (t: Throwable) {
+                "Global balance FAILED: ${t.javaClass.simpleName}: ${t.message}"
             }
-            dp.setInputGainbyChannel(0, leftDb)   // channel 0 = left
-            dp.setInputGainbyChannel(1, rightDb)  // channel 1 = right
-            "Global balance applied: L=${leftDb}dB R=${rightDb}dB (channels=$channelCount)"
-        } catch (t: Throwable) {
-            "Global balance FAILED: ${t.javaClass.simpleName}: ${t.message}"
         }
+        Log.d("POC", result)
+        return result
     }
 
     fun releaseGlobal(): String {
@@ -133,6 +141,6 @@ class AudioEffectPoc {
             "Global DP released"
         } catch (t: Throwable) {
             "Global DP release FAILED: ${t.message}"
-        }
+        }.also { Log.d("POC", it) }
     }
 }
