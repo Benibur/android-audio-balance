@@ -65,28 +65,29 @@ class AudioEffectPoc {
     // Session 0 GLOBAL test — "create BEFORE media player" protocol
     // ================================================================
 
-    private var globalDp: DynamicsProcessing? = null
-
     fun createGlobalSession0(): String {
         releaseGlobal()
         return try {
+            // Minimum config: only the implicit input gain stage is active.
+            // Disabling preEq / mbc / postEq / limiter removes all sources of
+            // silence or distortion observed in the first ear-test (2025-04).
             val config = DynamicsProcessing.Config.Builder(
-                0,      // variant: default (VARIANT_FAVOR_FREQUENCY_RESOLUTION=0)
-                2,      // channelCount: request 2 explicitly
-                true,   // preEqInUse
+                0,      // variant: default
+                2,      // channelCount: request stereo
+                false,  // preEqInUse — DISABLED
                 0,      // preEqBandCount
-                false,  // mbcInUse
+                false,  // mbcInUse — DISABLED
                 0,      // mbcBandCount
-                false,  // postEqInUse
+                false,  // postEqInUse — DISABLED
                 0,      // postEqBandCount
-                true    // limiterInUse
+                false   // limiterInUse — DISABLED
             ).build()
             val dp = DynamicsProcessing(0, 0, config) // priority=0, sessionId=0 LITERAL GLOBAL
             val enabled = dp.setEnabled(true)
             val hasControl = dp.hasControl()
             // Probe channel count: try to read channel 1; if it throws, it's mono.
             val channelCount = probeChannelCount(dp)
-            globalDp = dp
+            GlobalDpHolder.instance = dp
             "Global DP session=0 created OK | setEnabled=$enabled | hasControl=$hasControl | channelCount=$channelCount"
         } catch (t: Throwable) {
             "Global DP session=0 FAILED: ${t.javaClass.simpleName}: ${t.message}"
@@ -108,9 +109,27 @@ class AudioEffectPoc {
         }
     }
 
+    /**
+     * Diagnostic passthrough: sets both channels to 0 dB gain.
+     * Use this to verify that audio flows through the effect without modification.
+     * If audio plays normally after this, the DP instance is live and the pipeline
+     * is intact — any silence is caused by non-zero gain values, not a dead effect.
+     */
+    fun applyGlobalPassthrough(): String {
+        val dp = GlobalDpHolder.instance
+            ?: return "Global DP not created yet — tap 'Attach DP session 0 GLOBAL' first"
+        return try {
+            dp.setInputGainbyChannel(0, 0f)
+            dp.setInputGainbyChannel(1, 0f)
+            "Global passthrough: L=0dB R=0dB (should hear audio unchanged)"
+        } catch (t: Throwable) {
+            "Global passthrough FAILED: ${t.javaClass.simpleName}: ${t.message}"
+        }.also { Log.d("POC", it) }
+    }
+
     fun applyGlobalBalance(leftDb: Float, rightDb: Float): String {
+        val dp = GlobalDpHolder.instance
         val result: String
-        val dp = globalDp
         if (dp == null) {
             result = "Global DP not created yet — tap 'Attach DP session 0 GLOBAL' first"
         } else {
@@ -133,14 +152,30 @@ class AudioEffectPoc {
 
     fun releaseGlobal(): String {
         return try {
-            globalDp?.let {
+            GlobalDpHolder.instance?.let {
                 try { it.setEnabled(false) } catch (_: Throwable) {}
                 it.release()
             }
-            globalDp = null
+            GlobalDpHolder.instance = null
             "Global DP released"
         } catch (t: Throwable) {
             "Global DP release FAILED: ${t.message}"
         }.also { Log.d("POC", it) }
     }
+}
+
+/**
+ * Process-wide singleton holding the global session=0 DynamicsProcessing instance.
+ *
+ * The Activity is recreated on every configuration change and app switch, which
+ * would destroy any member-field reference to the DP instance. By storing the
+ * instance here (at the JVM class level), it survives Activity recreation for
+ * the entire lifetime of the process.
+ *
+ * Lifecycle: created by createGlobalSession0(), released by releaseGlobal() or
+ * explicit user action. Never auto-released on Activity destroy.
+ */
+@RequiresApi(Build.VERSION_CODES.P)
+object GlobalDpHolder {
+    var instance: DynamicsProcessing? = null
 }

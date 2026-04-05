@@ -420,7 +420,23 @@ class MainActivity : ComponentActivity() {
                             Text("Attach DP session 0 GLOBAL")
                         }
 
-                        // Button G2: Global Full Left
+                        // Button G2: Global Passthrough (0dB diagnostic)
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.applyGlobalPassthrough()
+                                        ?: "DynamicsProcessing not available (API < 28)"
+                                    log("Global Passthrough: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Global: Passthrough (0dB)")
+                        }
+
+                        // Button G3: Global Full Left
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
@@ -436,7 +452,7 @@ class MainActivity : ComponentActivity() {
                             Text("Global: Full Left")
                         }
 
-                        // Button G3: Global Center
+                        // Button G4: Global Center
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
@@ -452,7 +468,7 @@ class MainActivity : ComponentActivity() {
                             Text("Global: Center")
                         }
 
-                        // Button G4: Global Full Right
+                        // Button G5: Global Full Right
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
@@ -468,7 +484,7 @@ class MainActivity : ComponentActivity() {
                             Text("Global: Full Right")
                         }
 
-                        // Button G5: Release global
+                        // Button G6: Release global
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
