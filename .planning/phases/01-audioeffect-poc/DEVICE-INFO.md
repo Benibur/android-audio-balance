@@ -2,35 +2,40 @@
 
 ## Status
 
-> **PHYSICAL DEVICE NOT CONNECTED at time of file creation.**
-> Device serial `56191FDCR002NG` was not listed by `adb devices` during Task 1 execution.
-> The physical device properties below are **PENDING** — they must be filled in when the device is reconnected before the ear test.
-> The emulator data is recorded for reference (confirms API level compatibility on test infrastructure).
+> **Physical device `56191FDCR002NG` values recorded after ear-test session (2026-04-04).**
+> FEAS-01 validated: DynamicsProcessing on `mediaPlayer.audioSessionId` produces audible L/R balance shift on Pixel 10 / Android 16 / API 36.
 
 ---
 
-## Physical Device — PENDING (serial: 56191FDCR002NG)
+## Physical Device (serial: 56191FDCR002NG)
 
 | Property | Value |
 |---|---|
-| `ro.product.manufacturer` | *(run: `adb -s 56191FDCR002NG shell getprop ro.product.manufacturer`)* |
-| `ro.product.model` | *(run: `adb -s 56191FDCR002NG shell getprop ro.product.model`)* |
-| `ro.product.brand` | *(run: `adb -s 56191FDCR002NG shell getprop ro.product.brand`)* |
-| `ro.build.version.release` | *(run: `adb -s 56191FDCR002NG shell getprop ro.build.version.release`)* |
-| `ro.build.version.sdk` | *(run: `adb -s 56191FDCR002NG shell getprop ro.build.version.sdk`)* |
-| `ro.product.device` | *(run: `adb -s 56191FDCR002NG shell getprop ro.product.device`)* |
+| `ro.product.manufacturer` | Google |
+| `ro.product.model` | Pixel 10 |
+| `ro.product.brand` | google |
+| `ro.build.version.release` | 16 |
+| `ro.build.version.sdk` | 36 |
+| `ro.product.device` | *(not captured — not needed after validation)* |
 
 ### Physical Device Interpretation
 
-*(To be filled after device reconnect)*
+- **SDK 36 >= 28: DynamicsProcessing API 28+ is available — Approach A is applicable and VALIDATED**
+- Manufacturer is Google (Pixel): no Samsung/Xiaomi silent-failure risk on this device
+- FEAS-01 verdict: **AUDIBLE SHIFT confirmed** — Full Left and Full Right both produced clear audible balance shifts through user's Bluetooth headphones
 
-- If SDK >= 28: DynamicsProcessing API 28+ is available — Approach A is applicable
-- If SDK 26–27: DynamicsProcessing NOT available — document as hardware limitation, POC must use Equalizer probe only
-- If manufacturer is Samsung or Xiaomi: **HIGH SILENT-FAILURE RISK on session 0** (per research Pitfall 1)
+### Session ID Note
+
+The on-screen log reported `Session ID: 15521` (not 0). The effect was attached to `mediaPlayer.audioSessionId` (15521), **not** to hardcoded global session 0. This is a critical nuance for Phase 2 architecture:
+
+- **Tested in Plan 01-01:** Attaching DynamicsProcessing to a known `audioSessionId` from an internal MediaPlayer → WORKS
+- **NOT yet tested:** Attaching to session 0 directly (for external apps like Spotify/YouTube) → Plan 01-02
+
+Plan 01-02 will test the session 0 / external-session path. If session 0 is silently blocked on this device, Phase 2 must use `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION` broadcast to capture per-session IDs.
 
 ---
 
-## Emulator Reference (emulator-5554 — confirmed connected during Task 1)
+## Emulator Reference (emulator-5554 — used during Task 1 before physical device connected)
 
 | Property | Value |
 |---|---|
@@ -43,23 +48,5 @@
 
 ### Emulator Interpretation
 
-- **SDK 35 >= 28: DynamicsProcessing API 28+ is available — Approach A is applicable**
-- Manufacturer is Google (AOSP emulator): no Samsung/Xiaomi silent-failure risk on this device
-- Emulator cannot be used for ear-test (no Bluetooth audio output) — physical device 56191FDCR002NG is required
-
----
-
-## Next Step
-
-Connect physical device `56191FDCR002NG` via USB, authorize ADB on-device, then run:
-
-```bash
-adb -s 56191FDCR002NG shell getprop ro.product.manufacturer
-adb -s 56191FDCR002NG shell getprop ro.product.model
-adb -s 56191FDCR002NG shell getprop ro.product.brand
-adb -s 56191FDCR002NG shell getprop ro.build.version.release
-adb -s 56191FDCR002NG shell getprop ro.build.version.sdk
-adb -s 56191FDCR002NG shell getprop ro.product.device
-```
-
-Update the "Physical Device — PENDING" table above with real values before the ear test.
+- SDK 35 >= 28: DynamicsProcessing API 28+ is available — Approach A is applicable
+- Emulator cannot be used for ear-test (no Bluetooth audio output) — physical device 56191FDCR002NG is required for all audible validation
