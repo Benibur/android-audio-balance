@@ -324,4 +324,4 @@ Document here so Phase 2+ planning can find them if session 0 regresses on futur
 
 *Phase: 01-audioeffect-poc*
 *Evidence: plan-01-logcat.txt (12 lines), plan-02-logcat.txt (0 lines — buffer cleared)*
-*User approval: pending (Task 2 checkpoint)*
+*User approval: approved 2026-04-05*
