@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                     DisposableEffect(Unit) {
                         onDispose {
                             effect?.releaseEffect()
+                            effect?.releaseGlobal()
                             source.release()
                             try { externalEffect?.setEnabled(false); externalEffect?.release() } catch (_: Exception) {}
                             try { loudnessEffect?.setEnabled(false); loudnessEffect?.release() } catch (_: Exception) {}
@@ -379,6 +380,99 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             Text("Release external + LE")
+                        }
+
+                        // ================================================================
+                        // SESSION 0 GLOBAL test — "create BEFORE media player" protocol
+                        // ================================================================
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text(
+                            text = "--- Session 0 GLOBAL test (YouTube) ---",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = "Protocol: force-stop YouTube, tap Attach, tap Full Left, THEN open YouTube.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        // Button G1: Attach DP session 0 GLOBAL
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.createGlobalSession0()
+                                        ?: "DynamicsProcessing not available (API < 28)"
+                                    log("Global session=0: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Attach DP session 0 GLOBAL")
+                        }
+
+                        // Button G2: Global Full Left
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.applyGlobalBalance(0f, -60f)
+                                        ?: "DynamicsProcessing not available (API < 28)"
+                                    log("Global Full Left: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Global: Full Left")
+                        }
+
+                        // Button G3: Global Center
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.applyGlobalBalance(0f, 0f)
+                                        ?: "DynamicsProcessing not available (API < 28)"
+                                    log("Global Center: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Global: Center")
+                        }
+
+                        // Button G4: Global Full Right
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.applyGlobalBalance(-60f, 0f)
+                                        ?: "DynamicsProcessing not available (API < 28)"
+                                    log("Global Full Right: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Global: Full Right")
+                        }
+
+                        // Button G5: Release global
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    val result = effect?.releaseGlobal() ?: "n/a"
+                                    log("Release global: $result")
+                                } else {
+                                    log("Not supported on this Android version (API < 28)")
+                                }
+                            }
+                        ) {
+                            Text("Release global")
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
