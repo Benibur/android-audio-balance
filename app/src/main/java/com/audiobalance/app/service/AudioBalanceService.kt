@@ -222,6 +222,18 @@ class AudioBalanceService : LifecycleService() {
         val mac = device.address
         val deviceName = if (hasBluetoothConnectPermission()) device.name else null
 
+        val autoApply = balanceRepository.getAutoApply(mac)
+        if (!autoApply) {
+            // Register device as known (save name + preserve balance), but skip DP gain
+            val balance = balanceRepository.getBalance(mac)
+            balanceRepository.saveBalance(mac, balance)
+            deviceName?.let { balanceRepository.saveDeviceName(mac, it) }
+            _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = 0f)
+            updateNotification(formatNotificationText(deviceName, 0))
+            Log.d(TAG, "AutoApply disabled for mac=$mac — skipping balance")
+            return
+        }
+
         val balance = balanceRepository.getBalance(mac)  // 0f for unknown
         // Save unknown devices with balance 0 to make them "known"
         balanceRepository.saveBalance(mac, balance)
