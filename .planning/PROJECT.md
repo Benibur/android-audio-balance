@@ -60,4 +60,4 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 | Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | — Pending |
 
 ---
-*Last updated: 2026-04-06 after Phase 2 (Service + Persistence) complete — foreground service, BT A2DP detection, DataStore persistence, auto-apply balance validated on Pixel 10*
+*Last updated: 2026-04-06 after Phase 3 (UI) complete — all 4 phases done, v1.0 milestone complete*
