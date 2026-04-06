@@ -57,7 +57,11 @@ Plans:
   3. When a known BT device connects, the previously saved balance coefficient is applied automatically to the audio output
   4. A persistent foreground notification is visible while the service is running, showing the connected device name and active balance value
   5. When a BT device disconnects, the balance effect is removed and the notification updates accordingly
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Service skeleton + notification + DynamicsProcessing instance + dependencies (SVC-01, SVC-02)
+- [ ] 02-02-PLAN.md — BT A2DP detection + auto-apply balance + coroutine delays + DataStore (BT-01, BT-02, BT-03, AUDIO-02)
+- [ ] 02-03-PLAN.md — Boot receiver + persistence verification through kill/reboot (DATA-01, DATA-02)
 
 ### Phase 3: UI
 **Goal**: The user can see all known Bluetooth devices, adjust each device's balance with a slider, enable or disable auto-apply per device, and grant all required permissions through a guided flow
@@ -80,5 +84,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
 | 1. AudioEffect POC | 3/3 | Complete   | 2026-04-05 |
-| 2. Service + Persistence | 0/? | Not started | - |
+| 2. Service + Persistence | 0/3 | Planned | - |
 | 3. UI | 0/? | Not started | - |
