@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: "Completed 02-01-PLAN.md"
-last_updated: "2026-04-06T07:44:13Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-04-06T10:31:19.227Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -51,6 +51,7 @@ Plan: 2 of 3
 | Phase 01-audioeffect-poc P02 | 180 | 5 tasks | 5 files |
 | Phase 01-audioeffect-poc P03 | checkpoint | 2 tasks | 1 files |
 | Phase 02-service-persistence P01 | 595s | 3 tasks | 6 files |
+| Phase 02-service-persistence P02 | 60 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 02-01]: ServiceInfo constant FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is in android.content.pm.ServiceInfo, not android.app.ServiceInfo
 - [Phase 02-01]: android.R.drawable.ic_media_play used for notification icon — project has no drawable resources; Phase 3 will add proper icon
 - [Phase 02-01]: BLUETOOTH_CONNECT is a runtime permission on API 33+ — must be granted before startForeground(connectedDevice) or SecurityException is thrown; Phase 3 must implement permission flow before startForegroundService()
+- [Phase 02-02]: RECEIVER_EXPORTED required for system BT A2DP broadcasts — RECEIVER_NOT_EXPORTED silently blocks them on API 33+
+- [Phase 02-02]: resetBalanceToCenter() sets both DP channels to 0f but does not release DynamicsProcessing — DP stays alive between devices
+- [Phase 02-02]: New unknown BT devices saved with balance 0f immediately on first connect — no separate registration step needed
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T07:44:13Z
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-service-persistence/02-02-PLAN.md
+Last session: 2026-04-06T10:31:19.225Z
+Stopped at: Completed 02-02-PLAN.md
+Resume file: None

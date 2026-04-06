@@ -15,13 +15,13 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Audio
 
 - [ ] **AUDIO-01**: User peut ajuster la balance stéréo (-100% gauche à +100% droite) par device BT via un slider
-- [ ] **AUDIO-02**: Le coefficient de balance est appliqué system-wide au flux audio media quand le device BT est connecté
+- [x] **AUDIO-02**: Le coefficient de balance est appliqué system-wide au flux audio media quand le device BT est connecté
 
 ### Bluetooth
 
-- [ ] **BT-01**: L'app détecte automatiquement les connexions A2DP Bluetooth (adresse MAC)
-- [ ] **BT-02**: L'app détecte automatiquement les déconnexions A2DP Bluetooth
-- [ ] **BT-03**: Le coefficient de balance stocké est auto-appliqué à la connexion du device BT
+- [x] **BT-01**: L'app détecte automatiquement les connexions A2DP Bluetooth (adresse MAC)
+- [x] **BT-02**: L'app détecte automatiquement les déconnexions A2DP Bluetooth
+- [x] **BT-03**: Le coefficient de balance stocké est auto-appliqué à la connexion du device BT
 
 ### Service
 
@@ -84,10 +84,10 @@ Requirements for initial release. Each maps to roadmap phases.
 | FEAS-01 | Phase 1 | Complete |
 | FEAS-02 | Phase 1 | Complete |
 | AUDIO-01 | Phase 3 | Pending |
-| AUDIO-02 | Phase 2 | Pending |
-| BT-01 | Phase 2 | Pending |
-| BT-02 | Phase 2 | Pending |
-| BT-03 | Phase 2 | Pending |
+| AUDIO-02 | Phase 2 | Complete |
+| BT-01 | Phase 2 | Complete |
+| BT-02 | Phase 2 | Complete |
+| BT-03 | Phase 2 | Complete |
 | SVC-01 | Phase 2 | Complete |
 | SVC-02 | Phase 2 | Complete |
 | DATA-01 | Phase 2 | Pending |
