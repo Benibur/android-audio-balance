@@ -81,7 +81,14 @@ class AudioBalanceService : LifecycleService() {
             if (mac != null) {
                 serviceScope.launch {
                     balanceRepository.saveBalance(mac, balance.toFloat())
-                    Log.d(TAG, "TEST: Seeded balance=$balance for mac=$mac")
+                    // Apply immediately without requiring BT reconnect
+                    val (leftDb, rightDb) = BalanceMapper.toGainDb(balance)
+                    dp?.let {
+                        it.setInputGainbyChannel(0, leftDb)
+                        it.setInputGainbyChannel(1, rightDb)
+                    }
+                    updateNotification(formatNotificationText(currentDeviceName, balance))
+                    Log.d(TAG, "TEST: Seeded and applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB)")
                 }
             } else {
                 Log.w(TAG, "TEST: No device connected — cannot seed balance")
@@ -242,6 +249,8 @@ class AudioBalanceService : LifecycleService() {
                 val connected = proxy.connectedDevices
                 connected.firstOrNull()?.let { device ->
                     Log.d(TAG, "Already connected: ${device.address}")
+                    currentDeviceMac = device.address
+                    currentDeviceName = if (hasBluetoothConnectPermission()) device.name else null
                     serviceScope.launch {
                         delay(1000L)  // same 1s delay for routing stability
                         applyDeviceBalance(device)

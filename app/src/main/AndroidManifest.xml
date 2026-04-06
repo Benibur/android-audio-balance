@@ -33,7 +33,7 @@
         <service
             android:name=".service.AudioBalanceService"
             android:foregroundServiceType="connectedDevice"
-            android:exported="false" />
+            android:exported="true" /> <!-- TODO: set to false before any distribution -->
 
         <receiver
             android:name=".receiver.BootReceiver"
