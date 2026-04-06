@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-04-06T13:40:51.347Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-04-06T16:46:52.182Z"
 progress:
   total_phases: 4
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 12
+  completed_plans: 12
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Plan: 1 of 3
 | Phase 03-ui P01 | 3 | 2 tasks | 8 files |
 | Phase 03-ui P02 | 2 | 2 tasks | 3 files |
 | Phase 03-ui P03 | 15 | 2 tasks | 3 files |
+| Phase 03-ui P04 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase 03-ui]: NavHost start destination computed via remember block from ContextCompat.checkSelfPermission at launch time — avoids recomputation on recomposition
 - [Phase 03-ui]: Plan 03-02 pre-created DeviceCard.kt with correct content in parallel execution — no re-work needed
 - [Phase 03-ui]: Slider value conversion pattern: sliderValue = (balance + 100f) / 200f, reversed in onValueChange
+- [Phase 03-ui]: autoApply guard placed before DP gain application but after device registration: device appears connected in UI at center balance when disabled
+- [Phase 03-ui]: seed_balance handler remains ungated by autoApply — explicit user slider actions always apply regardless of toggle state
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T13:40:51.345Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-04-06T16:46:52.180Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
