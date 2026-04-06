@@ -44,15 +44,21 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
 
     private var lastSendTimestamp = 0L
 
+    private fun isConnectedDevice(mac: String): Boolean {
+        return AudioBalanceService.stateFlow.value.connectedDeviceMac == mac
+    }
+
     fun onSliderChange(mac: String, value: Float) {
         // Update local override immediately for smooth UI
         _sliderOverrides.value = _sliderOverrides.value + (mac to value)
 
-        // Throttle service calls to 50ms
-        val now = System.currentTimeMillis()
-        if (now - lastSendTimestamp >= 50) {
-            lastSendTimestamp = now
-            sendBalanceToService(value)
+        // Only send to service if this is the currently connected device
+        if (isConnectedDevice(mac)) {
+            val now = System.currentTimeMillis()
+            if (now - lastSendTimestamp >= 50) {
+                lastSendTimestamp = now
+                sendBalanceToService(value)
+            }
         }
     }
 
@@ -65,7 +71,10 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
 
         viewModelScope.launch {
             repository.saveBalance(mac, snappedValue)
-            sendBalanceToService(snappedValue)
+            // Only apply audio if this is the currently connected device
+            if (isConnectedDevice(mac)) {
+                sendBalanceToService(snappedValue)
+            }
         }
     }
 
