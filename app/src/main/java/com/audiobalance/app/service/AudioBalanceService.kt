@@ -93,13 +93,24 @@ class AudioBalanceService : LifecycleService() {
                     balanceRepository.saveBalance(mac, balance)
                     // Apply immediately without requiring BT reconnect
                     val (leftDb, rightDb) = BalanceMapper.toGainDb(balance.roundToInt())
+                    val dpInstance = dp
+                    if (dpInstance == null) {
+                        Log.w(TAG, "DP is null — recreating")
+                        createDpInstance()
+                    }
                     dp?.let {
-                        it.setInputGainbyChannel(0, leftDb)
-                        it.setInputGainbyChannel(1, rightDb)
+                        val hasCtrl = it.hasControl()
+                        if (!hasCtrl) {
+                            Log.w(TAG, "DP lost control — recreating")
+                            it.release()
+                            createDpInstance()
+                        }
+                        dp?.setInputGainbyChannel(0, leftDb)
+                        dp?.setInputGainbyChannel(1, rightDb)
+                        Log.d(TAG, "Applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB hasControl=${dp?.hasControl()})")
                     }
                     _stateFlow.value = _stateFlow.value.copy(currentBalance = balance)
                     updateNotification(formatNotificationText(currentDeviceName, balance.roundToInt()))
-                    Log.d(TAG, "Applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB)")
                 }
             } else {
                 Log.w(TAG, "No device connected — cannot apply balance")
