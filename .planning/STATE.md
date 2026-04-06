@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-06T06:54:58.193Z"
+stopped_at: "Completed 02-01-PLAN.md"
+last_updated: "2026-04-06T07:44:13Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement — sans intervention manuelle
-**Current focus:** Phase 01 — audioeffect-poc
+**Current focus:** Phase 02 — service-persistence
 
 ## Current Position
 
-Phase: 01 (audioeffect-poc) — EXECUTING
+Phase: 02 (service-persistence) — EXECUTING
 Plan: 2 of 3
 
 ## Performance Metrics
@@ -50,6 +50,7 @@ Plan: 2 of 3
 | Phase 01-audioeffect-poc P01 | 90 | 3 tasks | 6 files |
 | Phase 01-audioeffect-poc P02 | 180 | 5 tasks | 5 files |
 | Phase 01-audioeffect-poc P03 | checkpoint | 2 tasks | 1 files |
+| Phase 02-service-persistence P01 | 595s | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 01-02]: GlobalDpHolder singleton required for Activity-recreation-safe effect lifetime — store in object or foreground service, never in Activity member field
 - [Phase 01-audioeffect-poc]: POC-RESULTS.md approved by user — Phase 1 deliverable sealed and ready for Phase 2 consumption
 - [Phase 01-audioeffect-poc]: Phase 2 architecture: single DynamicsProcessing(0, 0, config) in foreground service — per-session Map not needed
+- [Phase 02-01]: ServiceInfo constant FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is in android.content.pm.ServiceInfo, not android.app.ServiceInfo
+- [Phase 02-01]: android.R.drawable.ic_media_play used for notification icon — project has no drawable resources; Phase 3 will add proper icon
+- [Phase 02-01]: BLUETOOTH_CONNECT is a runtime permission on API 33+ — must be granted before startForeground(connectedDevice) or SecurityException is thrown; Phase 3 must implement permission flow before startForegroundService()
 
 ### Pending Todos
 
@@ -86,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T06:54:58.191Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-service-persistence/02-CONTEXT.md
+Last session: 2026-04-06T07:44:13Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-service-persistence/02-02-PLAN.md

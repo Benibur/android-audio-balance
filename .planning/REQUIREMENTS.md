@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Service
 
-- [ ] **SVC-01**: Un foreground service (`connectedDevice`) maintient l'app active en arrière-plan
-- [ ] **SVC-02**: Une notification persistante indique l'état du service (device connecté, balance active)
+- [x] **SVC-01**: Un foreground service (`connectedDevice`) maintient l'app active en arrière-plan
+- [x] **SVC-02**: Une notification persistante indique l'état du service (device connecté, balance active)
 
 ### Persistence
 
@@ -88,8 +88,8 @@ Requirements for initial release. Each maps to roadmap phases.
 | BT-01 | Phase 2 | Pending |
 | BT-02 | Phase 2 | Pending |
 | BT-03 | Phase 2 | Pending |
-| SVC-01 | Phase 2 | Pending |
-| SVC-02 | Phase 2 | Pending |
+| SVC-01 | Phase 2 | Complete |
+| SVC-02 | Phase 2 | Complete |
 | DATA-01 | Phase 2 | Pending |
 | DATA-02 | Phase 2 | Pending |
 | UI-01 | Phase 3 | Pending |
