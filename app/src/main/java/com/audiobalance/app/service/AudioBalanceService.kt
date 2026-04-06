@@ -20,13 +20,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import com.audiobalance.app.MainActivity
 import com.audiobalance.app.data.BalanceRepository
+import com.audiobalance.app.ui.state.ServiceState
 import com.audiobalance.app.util.BalanceMapper
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "AudioBalanceService"
@@ -35,6 +40,11 @@ private const val CHANNEL_ID = "audio_balance_service"
 
 @RequiresApi(Build.VERSION_CODES.P)
 class AudioBalanceService : LifecycleService() {
+
+    companion object {
+        private val _stateFlow = MutableStateFlow(ServiceState())
+        val stateFlow: StateFlow<ServiceState> = _stateFlow.asStateFlow()
+    }
 
     private var dp: DynamicsProcessing? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -73,25 +83,24 @@ class AudioBalanceService : LifecycleService() {
         // intent can be null when START_STICKY restarts the service after being killed
         super.onStartCommand(intent, flags, startId)
 
-        // TEMPORARY — Phase 2 testing only. Seed a test balance for the currently connected device.
-        // Usage: adb -s <device> shell am startservice -n com.audiobalance.app/.service.AudioBalanceService --es action seed_balance --ei balance -50
         if (intent?.getStringExtra("action") == "seed_balance") {
-            val balance = intent.getIntExtra("balance", 0)
+            val balance = intent.getFloatExtra("balance", 0f)
             val mac = currentDeviceMac
             if (mac != null) {
                 serviceScope.launch {
-                    balanceRepository.saveBalance(mac, balance.toFloat())
+                    balanceRepository.saveBalance(mac, balance)
                     // Apply immediately without requiring BT reconnect
-                    val (leftDb, rightDb) = BalanceMapper.toGainDb(balance)
+                    val (leftDb, rightDb) = BalanceMapper.toGainDb(balance.roundToInt())
                     dp?.let {
                         it.setInputGainbyChannel(0, leftDb)
                         it.setInputGainbyChannel(1, rightDb)
                     }
-                    updateNotification(formatNotificationText(currentDeviceName, balance))
-                    Log.d(TAG, "TEST: Seeded and applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB)")
+                    _stateFlow.value = _stateFlow.value.copy(currentBalance = balance)
+                    updateNotification(formatNotificationText(currentDeviceName, balance.roundToInt()))
+                    Log.d(TAG, "Applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB)")
                 }
             } else {
-                Log.w(TAG, "TEST: No device connected — cannot seed balance")
+                Log.w(TAG, "No device connected — cannot apply balance")
             }
         }
 
@@ -187,6 +196,7 @@ class AudioBalanceService : LifecycleService() {
                 reconnectJob?.cancel()
                 currentDeviceMac = mac
                 currentDeviceName = name
+                _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = name, currentBalance = 0f)
                 reconnectJob = serviceScope.launch {
                     delay(1000L)  // 1s delay — let BT audio routing stabilize
                     applyDeviceBalance(device)
@@ -200,6 +210,7 @@ class AudioBalanceService : LifecycleService() {
                     resetBalanceToCenter()
                     currentDeviceMac = null
                     currentDeviceName = null
+                    _stateFlow.value = ServiceState()  // back to defaults
                     updateNotification("No device connected")
                     Log.d(TAG, "Balance reset to center after disconnect timeout")
                 }
@@ -214,6 +225,7 @@ class AudioBalanceService : LifecycleService() {
         val balance = balanceRepository.getBalance(mac)  // 0f for unknown
         // Save unknown devices with balance 0 to make them "known"
         balanceRepository.saveBalance(mac, balance)
+        deviceName?.let { balanceRepository.saveDeviceName(mac, it) }
 
         val (leftDb, rightDb) = BalanceMapper.toGainDb(balance.toInt())
         dp?.let {
@@ -222,6 +234,7 @@ class AudioBalanceService : LifecycleService() {
             Log.d(TAG, "Balance applied: mac=$mac balance=${balance.toInt()} L=${leftDb}dB R=${rightDb}dB")
         }
 
+        _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = balance)
         updateNotification(formatNotificationText(deviceName, balance.toInt()))
     }
 
@@ -251,6 +264,11 @@ class AudioBalanceService : LifecycleService() {
                     Log.d(TAG, "Already connected: ${device.address}")
                     currentDeviceMac = device.address
                     currentDeviceName = if (hasBluetoothConnectPermission()) device.name else null
+                    _stateFlow.value = ServiceState(
+                        connectedDeviceMac = device.address,
+                        connectedDeviceName = if (hasBluetoothConnectPermission()) device.name else null,
+                        currentBalance = 0f
+                    )
                     serviceScope.launch {
                         delay(1000L)  // same 1s delay for routing stability
                         applyDeviceBalance(device)
