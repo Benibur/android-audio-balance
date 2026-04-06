@@ -22,7 +22,7 @@ Hors scope :
 ### Notification foreground service
 - **Format minimal** quand device connecté : `"{device_name} • Balance: L+{value}%"` (ou `R+{value}%` ou `Center`)
 - **Aucune action rapide** dans la notification — pour modifier la balance, l'utilisateur ouvre l'app
-- **Masquer la notification quand aucun device BT connecté** — le service ne tourne pas (ou s'arrête) quand pas de BT A2DP actif. Il redémarre au prochain connect. Attention : sur Android 12+ il y a des restrictions sur le démarrage de foreground services depuis le background — le service devra être démarré via un broadcast receiver BT qui a l'exemption de démarrage.
+- **Service toujours actif** — le service tourne en permanence (START_STICKY + BOOT_COMPLETED). Quand aucun device BT connecté, notification minimale type "Audio Balance • En attente". Raison : Android 12+ interdit le démarrage de foreground service depuis un broadcast BT background. Un service permanent est la seule approche fiable pour ne jamais rater une connexion BT.
 
 ### Déconnexion BT
 - **Délai de 2 secondes** après réception du broadcast de déconnexion A2DP, puis reset balance à center (0dB/0dB) SI le device n'est pas revenu entre-temps
