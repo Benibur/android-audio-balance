@@ -34,5 +34,13 @@
             android:name=".service.AudioBalanceService"
             android:foregroundServiceType="connectedDevice"
             android:exported="false" />
+
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

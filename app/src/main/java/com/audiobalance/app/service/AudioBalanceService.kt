@@ -72,6 +72,22 @@ class AudioBalanceService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // intent can be null when START_STICKY restarts the service after being killed
         super.onStartCommand(intent, flags, startId)
+
+        // TEMPORARY — Phase 2 testing only. Seed a test balance for the currently connected device.
+        // Usage: adb -s <device> shell am startservice -n com.audiobalance.app/.service.AudioBalanceService --es action seed_balance --ei balance -50
+        if (intent?.getStringExtra("action") == "seed_balance") {
+            val balance = intent.getIntExtra("balance", 0)
+            val mac = currentDeviceMac
+            if (mac != null) {
+                serviceScope.launch {
+                    balanceRepository.saveBalance(mac, balance.toFloat())
+                    Log.d(TAG, "TEST: Seeded balance=$balance for mac=$mac")
+                }
+            } else {
+                Log.w(TAG, "TEST: No device connected — cannot seed balance")
+            }
+        }
+
         return START_STICKY
     }
 
