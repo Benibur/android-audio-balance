@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">Audio Balance</string>
+
+    <!-- Permission screen -->
+    <string name="permission_title">Allow Audio Balance to work</string>
+    <string name="permission_body">To detect your Bluetooth headphones and run in the background, this app needs two permissions.</string>
+    <string name="permission_bluetooth_label">Bluetooth Connect — to detect your headphones</string>
+    <string name="permission_notification_label">Notifications — to show balance status while running</string>
+    <string name="permission_cta">Grant permissions</string>
+    <string name="permission_denied_message">Permission denied. Tap \'Open settings\' to grant it manually.</string>
+    <string name="permission_open_settings">Open settings</string>
+    <string name="permission_retry">Retry permissions</string>
+
+    <!-- Device list screen -->
+    <string name="device_list_title">Audio Balance</string>
+    <string name="empty_state_heading">No devices yet</string>
+    <string name="empty_state_body">Connect a Bluetooth device to see it here.</string>
+    <string name="connected_badge">Connected</string>
+    <string name="balance_center">Center</string>
+    <string name="balance_left">L+%1$d</string>
+    <string name="balance_right">R+%1$d</string>
+    <string name="slider_label_left">L</string>
+    <string name="slider_label_right">R</string>
+    <string name="auto_apply_content_description">Auto-apply for %1$s</string>
+
+    <!-- Error states -->
+    <string name="error_service_unavailable">Balance service is not running. Tap to restart.</string>
+    <string name="error_service_restart">Restart</string>
+    <string name="error_permission_revoked">Bluetooth permission was removed. Tap to re-grant.</string>
+    <string name="error_permission_fix">Fix</string>
 </resources>
