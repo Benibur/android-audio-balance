@@ -3,7 +3,6 @@ package com.audiobalance.app.ui.navigation
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -11,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.audiobalance.app.ui.screens.DeviceListScreen
 import com.audiobalance.app.ui.screens.PermissionScreen
 
 @Composable
@@ -43,8 +43,7 @@ fun AppNavigation() {
             )
         }
         composable("device_list") {
-            // Placeholder — Plan 03 will replace this with DeviceListScreen
-            Text("Device List — loading...")
+            DeviceListScreen()
         }
     }
 }
