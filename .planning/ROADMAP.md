@@ -73,7 +73,11 @@ Plans:
   3. Toggling the enable/disable switch for a device prevents or restores auto-apply for that device
   4. The currently connected device is visually distinguished from devices that are not connected
   5. On first launch, the app requests all required runtime permissions (BLUETOOTH_CONNECT, notification) with a plain-language explanation before any Bluetooth call is made
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 03-01-PLAN.md — ViewModel + state classes + string resources + service StateFlow + repository extensions + dependencies
+- [ ] 03-02-PLAN.md — Permission onboarding screen + navigation infrastructure + MainActivity cleanup
+- [ ] 03-03-PLAN.md — Device list screen + device cards with slider, toggle, and connected distinction
 
 ## Progress
 
@@ -85,4 +89,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
 | 1. AudioEffect POC | 3/3 | Complete   | 2026-04-05 |
 | 2. Service + Persistence | 3/3 | Complete   | 2026-04-06 |
-| 3. UI | 0/? | Not started | - |
+| 3. UI | 0/3 | Not started | - |
