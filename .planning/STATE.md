@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-ui-01-PLAN.md
-last_updated: "2026-04-06T13:35:07.294Z"
+stopped_at: Completed 03-ui-02-PLAN.md
+last_updated: "2026-04-06T13:39:03.463Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -54,6 +54,7 @@ Plan: 1 of 3
 | Phase 02-service-persistence P02 | 60 | 3 tasks | 4 files |
 | Phase 02-service-persistence P03 | 90 | 2 tasks | 3 files |
 | Phase 03-ui P01 | 3 | 2 tasks | 8 files |
+| Phase 03-ui P02 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 03-ui]: Intent-based (not bound service) communication from ViewModel to AudioBalanceService — consistent with Phase 2 seed_balance pattern
 - [Phase 03-ui]: seed_balance handler accepts Float via getFloatExtra instead of Int — enables slider precision without rounding loss
 - [Phase 03-ui]: Companion object StateFlow on AudioBalanceService as singleton — ViewModel collects directly without binding
+- [Phase 03-ui]: Permission launchers declared inside composable using rememberLauncherForActivityResult — not in Activity or ViewModel
+- [Phase 03-ui]: NavHost start destination computed via remember block from ContextCompat.checkSelfPermission at launch time — avoids recomputation on recomposition
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T13:35:07.292Z
-Stopped at: Completed 03-ui-01-PLAN.md
+Last session: 2026-04-06T13:39:03.461Z
+Stopped at: Completed 03-ui-02-PLAN.md
 Resume file: None

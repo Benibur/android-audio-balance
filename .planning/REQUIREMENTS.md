@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **UI-02**: L'utilisateur peut ajuster la balance via un slider horizontal par device
 - [x] **UI-03**: L'utilisateur peut activer/désactiver l'auto-apply par device via un toggle
 - [ ] **UI-04**: Le device actuellement connecté est visuellement distingué dans la liste
-- [ ] **UI-05**: Les permissions runtime nécessaires sont demandées avec explication claire
+- [x] **UI-05**: Les permissions runtime nécessaires sont demandées avec explication claire
 
 ## v2 Requirements
 
@@ -96,7 +96,7 @@ Requirements for initial release. Each maps to roadmap phases.
 | UI-02 | Phase 3 | Pending |
 | UI-03 | Phase 3 | Complete |
 | UI-04 | Phase 3 | Pending |
-| UI-05 | Phase 3 | Pending |
+| UI-05 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
