@@ -72,15 +72,28 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
     fun onAutoApplyToggle(mac: String, enabled: Boolean) {
         viewModelScope.launch {
             repository.saveAutoApply(mac, enabled)
+            if (enabled) {
+                // Re-apply stored balance immediately
+                val balance = repository.getBalance(mac)
+                sendBalanceToService(balance)
+            } else {
+                // Reset to center immediately
+                sendBalanceToService(0f)
+            }
         }
     }
 
     private fun sendBalanceToService(balance: Float) {
         val context = getApplication<Application>()
+        android.util.Log.d("DeviceListViewModel", "sendBalanceToService: balance=$balance")
         val intent = Intent(context, AudioBalanceService::class.java).apply {
             putExtra("action", "seed_balance")
             putExtra("balance", balance)
         }
-        context.startForegroundService(intent)
+        try {
+            context.startForegroundService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("DeviceListViewModel", "startForegroundService failed: ${e.message}")
+        }
     }
 }

@@ -158,6 +158,7 @@ fun DeviceCard(
                     onValueChangeFinished = {
                         onBalanceFinished(device.balance)
                     },
+                    enabled = device.autoApplyEnabled,
                     valueRange = 0f..1f,
                     modifier = Modifier.weight(1f)
                 )
