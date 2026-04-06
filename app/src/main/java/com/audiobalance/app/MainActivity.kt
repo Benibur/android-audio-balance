@@ -1,5 +1,6 @@
 package com.audiobalance.app
 
+import android.content.Intent
 import android.media.audiofx.DynamicsProcessing
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
@@ -33,6 +34,7 @@ import com.audiobalance.app.poc.AudioEffectPoc
 import com.audiobalance.app.poc.FallbackProbes
 import com.audiobalance.app.poc.InternalAudioSource
 import com.audiobalance.app.poc.SessionBroadcastReceiver
+import com.audiobalance.app.service.AudioBalanceService
 import com.audiobalance.app.ui.theme.AudioBalanceTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -45,6 +47,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Phase 2 temporary: start foreground service + request permissions for testing
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(
+                arrayOf(
+                    android.Manifest.permission.POST_NOTIFICATIONS,
+                    android.Manifest.permission.BLUETOOTH_CONNECT
+                ), 1001
+            )
+        }
+        val serviceIntent = Intent(this, AudioBalanceService::class.java)
+        startForegroundService(serviceIntent)
+
         setContent {
             AudioBalanceTheme {
                 Surface(
