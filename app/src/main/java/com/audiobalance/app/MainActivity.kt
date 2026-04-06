@@ -14,13 +14,21 @@ import com.audiobalance.app.ui.navigation.AppNavigation
 import com.audiobalance.app.ui.theme.AudioBalanceTheme
 
 class MainActivity : ComponentActivity() {
+    private fun hasBluetoothConnectPermission(): Boolean {
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.BLUETOOTH_CONNECT
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Start the foreground service (permissions are now handled by PermissionScreen)
-        val serviceIntent = Intent(this, AudioBalanceService::class.java)
-        startForegroundService(serviceIntent)
+        // Service is started AFTER permissions are granted — see AppNavigation onAllGranted
+        // If permissions are already granted (not first launch), start immediately
+        if (hasBluetoothConnectPermission()) {
+            startForegroundService(Intent(this, AudioBalanceService::class.java))
+        }
 
         setContent {
             AudioBalanceTheme {

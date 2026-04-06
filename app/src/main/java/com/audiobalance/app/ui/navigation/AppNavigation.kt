@@ -1,6 +1,7 @@
 package com.audiobalance.app.ui.navigation
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.runtime.Composable
@@ -10,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.audiobalance.app.service.AudioBalanceService
 import com.audiobalance.app.ui.screens.DeviceListScreen
 import com.audiobalance.app.ui.screens.PermissionScreen
 
@@ -36,6 +38,8 @@ fun AppNavigation() {
         composable("permissions") {
             PermissionScreen(
                 onAllGranted = {
+                    // Start the service now that permissions are granted
+                    context.startForegroundService(Intent(context, AudioBalanceService::class.java))
                     navController.navigate("device_list") {
                         popUpTo("permissions") { inclusive = true }
                     }
