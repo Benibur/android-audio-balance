@@ -36,9 +36,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### UI
 
 - [x] **UI-01**: L'utilisateur voit la liste des devices BT connus avec leur coefficient de balance
-- [ ] **UI-02**: L'utilisateur peut ajuster la balance via un slider horizontal par device
+- [x] **UI-02**: L'utilisateur peut ajuster la balance via un slider horizontal par device
 - [x] **UI-03**: L'utilisateur peut activer/désactiver l'auto-apply par device via un toggle
-- [ ] **UI-04**: Le device actuellement connecté est visuellement distingué dans la liste
+- [x] **UI-04**: Le device actuellement connecté est visuellement distingué dans la liste
 - [x] **UI-05**: Les permissions runtime nécessaires sont demandées avec explication claire
 
 ## v2 Requirements
@@ -93,9 +93,9 @@ Requirements for initial release. Each maps to roadmap phases.
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | UI-01 | Phase 3 | Complete |
-| UI-02 | Phase 3 | Pending |
+| UI-02 | Phase 3 | Complete |
 | UI-03 | Phase 3 | Complete |
-| UI-04 | Phase 3 | Pending |
+| UI-04 | Phase 3 | Complete |
 | UI-05 | Phase 3 | Complete |
 
 **Coverage:**

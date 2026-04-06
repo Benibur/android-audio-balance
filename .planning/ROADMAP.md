@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 0: Dev Environment** - Android Studio, SDK, emulator, ADB setup — everything needed to build and deploy (completed 2026-04-04)
 - [x] **Phase 1: AudioEffect POC** - Validate that balance can be applied system-wide on target hardware before any service work (completed 2026-04-05)
 - [x] **Phase 2: Service + Persistence** - Foreground service, BT detection, DataStore persistence, and balance application wired together (completed 2026-04-06)
-- [ ] **Phase 3: UI** - Compose screens for device list, balance sliders, toggles, and permission flows
+- [x] **Phase 3: UI** - Compose screens for device list, balance sliders, toggles, and permission flows (completed 2026-04-06)
 
 ## Phase Details
 
@@ -73,7 +73,7 @@ Plans:
   3. Toggling the enable/disable switch for a device prevents or restores auto-apply for that device
   4. The currently connected device is visually distinguished from devices that are not connected
   5. On first launch, the app requests all required runtime permissions (BLUETOOTH_CONNECT, notification) with a plain-language explanation before any Bluetooth call is made
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 03-01-PLAN.md — ViewModel + state classes + string resources + service StateFlow + repository extensions + dependencies
 - [ ] 03-02-PLAN.md — Permission onboarding screen + navigation infrastructure + MainActivity cleanup
@@ -89,4 +89,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
 | 1. AudioEffect POC | 3/3 | Complete   | 2026-04-05 |
 | 2. Service + Persistence | 3/3 | Complete   | 2026-04-06 |
-| 3. UI | 2/3 | In Progress|  |
+| 3. UI | 3/3 | Complete   | 2026-04-06 |
