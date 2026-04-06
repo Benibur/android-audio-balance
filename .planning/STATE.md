@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-04-06T12:50:09.670Z"
+stopped_at: Completed 03-ui-01-PLAN.md
+last_updated: "2026-04-06T13:35:07.294Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement — sans intervention manuelle
-**Current focus:** Phase 03 — UI (next phase)
+**Current focus:** Phase 03 — ui
 
 ## Current Position
 
-Phase: 02 (service-persistence) — COMPLETE (3/3 plans done)
-Phase: 03 (UI) — NOT STARTED
+Phase: 03 (ui) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Phase: 03 (UI) — NOT STARTED
 | Phase 02-service-persistence P01 | 595s | 3 tasks | 6 files |
 | Phase 02-service-persistence P02 | 60 | 3 tasks | 4 files |
 | Phase 02-service-persistence P03 | 90 | 2 tasks | 3 files |
+| Phase 03-ui P01 | 3 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 02-service-persistence]: AudioBalanceService android:exported=true required on Android 12+ for adb am startservice — Phase 3 should review for distribution hardening
 - [Phase 02-service-persistence]: checkCurrentlyConnectedDevices() must set currentDeviceMac from proxy callback — required for seed commands and any startup-time logic that checks currentDeviceMac
 - [Phase 02-service-persistence]: seed_balance handler applies DP gain immediately (setInputGainbyChannel + notification update) — saves to DataStore and applies at once, no BT reconnect needed
+- [Phase 03-ui]: Intent-based (not bound service) communication from ViewModel to AudioBalanceService — consistent with Phase 2 seed_balance pattern
+- [Phase 03-ui]: seed_balance handler accepts Float via getFloatExtra instead of Int — enables slider precision without rounding loss
+- [Phase 03-ui]: Companion object StateFlow on AudioBalanceService as singleton — ViewModel collects directly without binding
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T12:50:09.666Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-ui/03-UI-SPEC.md
+Last session: 2026-04-06T13:35:07.292Z
+Stopped at: Completed 03-ui-01-PLAN.md
+Resume file: None

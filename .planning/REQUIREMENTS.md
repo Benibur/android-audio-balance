@@ -14,7 +14,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Audio
 
-- [ ] **AUDIO-01**: User peut ajuster la balance stéréo (-100% gauche à +100% droite) par device BT via un slider
+- [x] **AUDIO-01**: User peut ajuster la balance stéréo (-100% gauche à +100% droite) par device BT via un slider
 - [x] **AUDIO-02**: Le coefficient de balance est appliqué system-wide au flux audio media quand le device BT est connecté
 
 ### Bluetooth
@@ -35,9 +35,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### UI
 
-- [ ] **UI-01**: L'utilisateur voit la liste des devices BT connus avec leur coefficient de balance
+- [x] **UI-01**: L'utilisateur voit la liste des devices BT connus avec leur coefficient de balance
 - [ ] **UI-02**: L'utilisateur peut ajuster la balance via un slider horizontal par device
-- [ ] **UI-03**: L'utilisateur peut activer/désactiver l'auto-apply par device via un toggle
+- [x] **UI-03**: L'utilisateur peut activer/désactiver l'auto-apply par device via un toggle
 - [ ] **UI-04**: Le device actuellement connecté est visuellement distingué dans la liste
 - [ ] **UI-05**: Les permissions runtime nécessaires sont demandées avec explication claire
 
@@ -83,7 +83,7 @@ Requirements for initial release. Each maps to roadmap phases.
 |-------------|-------|--------|
 | FEAS-01 | Phase 1 | Complete |
 | FEAS-02 | Phase 1 | Complete |
-| AUDIO-01 | Phase 3 | Pending |
+| AUDIO-01 | Phase 3 | Complete |
 | AUDIO-02 | Phase 2 | Complete |
 | BT-01 | Phase 2 | Complete |
 | BT-02 | Phase 2 | Complete |
@@ -92,9 +92,9 @@ Requirements for initial release. Each maps to roadmap phases.
 | SVC-02 | Phase 2 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
-| UI-01 | Phase 3 | Pending |
+| UI-01 | Phase 3 | Complete |
 | UI-02 | Phase 3 | Pending |
-| UI-03 | Phase 3 | Pending |
+| UI-03 | Phase 3 | Complete |
 | UI-04 | Phase 3 | Pending |
 | UI-05 | Phase 3 | Pending |
 
