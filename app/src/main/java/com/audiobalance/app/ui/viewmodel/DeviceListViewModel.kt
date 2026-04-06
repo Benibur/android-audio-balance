@@ -81,13 +81,14 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
     fun onAutoApplyToggle(mac: String, enabled: Boolean) {
         viewModelScope.launch {
             repository.saveAutoApply(mac, enabled)
-            if (enabled) {
-                // Re-apply stored balance immediately
-                val balance = repository.getBalance(mac)
-                sendBalanceToService(balance)
-            } else {
-                // Reset audio to center WITHOUT saving (preserve stored balance)
-                sendResetToService()
+            // Only affect audio if this is the currently connected device
+            if (isConnectedDevice(mac)) {
+                if (enabled) {
+                    val balance = repository.getBalance(mac)
+                    sendBalanceToService(balance)
+                } else {
+                    sendResetToService()
+                }
             }
         }
     }
