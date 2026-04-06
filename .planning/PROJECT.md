@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Application Android légère qui applique automatiquement un coefficient de balance stéréo (gauche/droite) spécifique à chaque paire d'écouteurs Bluetooth. L'app détecte les connexions BT, applique le réglage persistant associé, et tourne en arrière-plan via un foreground service. Usage personnel pour compenser le déséquilibre audio d'écouteurs BT mal calibrés.
+Application Android qui applique automatiquement un coefficient de balance stéréo (gauche/droite) spécifique à chaque paire d'écouteurs Bluetooth. L'app détecte les connexions BT A2DP, applique le réglage persistant via DynamicsProcessing session 0 global, et tourne en arrière-plan via un foreground service. Compose UI avec slider temps réel, toggle auto-apply par device, et flow de permissions.
 
 ## Core Value
 
@@ -12,52 +12,69 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Détection automatique des connexions/déconnexions BT audio (A2DP) — v1.0
+- ✓ Stockage persistant du coefficient de balance par adresse MAC — v1.0
+- ✓ Application de la balance stéréo system-wide sur le flux audio media — v1.0
+- ✓ Foreground service avec notification discrète pour maintien en arrière-plan — v1.0
+- ✓ Démarrage automatique au boot (BOOT_COMPLETED) — v1.0
+- ✓ UI Material Design minimaliste : liste des devices connus avec slider de balance — v1.0
+- ✓ Toggle activation/désactivation par device — v1.0
 
 ### Active
 
-- [ ] Détection automatique des connexions/déconnexions BT audio (A2DP)
-- [ ] Stockage persistant du coefficient de balance par adresse MAC
-- [ ] Application de la balance stéréo system-wide sur le flux audio media
-- [ ] Foreground service avec notification discrète pour maintien en arrière-plan
-- [ ] Démarrage automatique au boot (BOOT_COMPLETED)
-- [ ] UI Material Design minimaliste : liste des devices connus avec slider de balance
-- [ ] Toggle global activation/désactivation par device
 - [ ] Export/import des réglages en JSON
 - [ ] Reset de tous les coefficients
+- [ ] i18n avec 10 langues
+- [ ] Section "À propos"
+- [ ] FAQ expliquant la finalité de l'app
+- [ ] Nicknames personnalisés par device
+- [ ] Timestamp du dernier apply par device
+- [ ] Bouton "Test balance" pour prévisualiser
+- [ ] Action "Apply now" dans la notification
+- [ ] Quick Settings Tile pour toggle rapide
+- [ ] Toggle global on/off (kill switch)
 
 ### Out of Scope
 
-- Contrôle du volume minimal — besoin séparé, à traiter plus tard
+- Contrôle du volume minimal — besoin séparé, à traiter dans un autre projet
+- Égaliseur multi-bandes — Wavelet existe déjà pour ça
 - Support des écouteurs filaires — uniquement Bluetooth
-- Support du speaker interne — uniquement périphériques BT
+- Support du speaker interne — hors du cas d'usage
 - Publication sur Play Store — déploiement USB direct uniquement
+- AutoEQ database — le problème ici est le déséquilibre usine, pas la réponse fréquentielle
+- Sync cloud — overkill pour usage personnel ; JSON export/import suffit
+- Profiles per-app — nécessite DUMP permission + monitoring de sessions ; trop complexe
 
 ## Context
 
-- **Motivation** : Écouteurs BT personnels avec balance stéréo déséquilibrée d'usine
-- **Difficulté technique principale** : ~~Pas d'API native Android pour la balance stéréo globale post-Android 10~~ **RÉSOLU en Phase 1** : `DynamicsProcessing(0, 0, config)` avec session ID = 0 littéral fonctionne sur Pixel 10 / Android 16. Voir `.planning/phases/01-audioeffect-poc/POC-RESULTS.md` pour le pattern exact.
-- **Méthodologie** : Étude de faisabilité technique (recherche + POC si incertitude) avant le développement, pour valider l'approche de balance globale
-- **Stack** : Kotlin, Jetpack Compose, Android 8+ (API 26+)
-- **Environnement** : Android Studio, émulateur + device physique USB pour tests
-- **Développeur** : Pas d'expérience Android préalable — Claude pilote l'implémentation
+- **v1.0 shipped** : 4 phases, 12 plans, 1718 LOC Kotlin, 21 fichiers
+- **Device de test** : Pixel 10 (Android 16, API 36), Bose QC35 Ben
+- **Stack** : Kotlin, Jetpack Compose, Material3, DataStore Preferences, DynamicsProcessing
+- **Audio** : `DynamicsProcessing(0, 0, config)` session 0 global — fonctionne sans root sur Android 16. Config avec toutes stages désactivées obligatoire. Détail complet dans `POC-RESULTS.md`.
+- **Architecture** : Foreground service `connectedDevice` + START_STICKY + BOOT_COMPLETED. BT receiver dynamique (RECEIVER_EXPORTED). DP auto-recovery si perte de contrôle.
+- **Gotcha majeur** : une autre app AudioEffect sur session 0 (ex: Jazib Khan Equalizer) évince notre DP. Résolu par auto-recreation du DP à chaque apply.
 
 ## Constraints
 
-- **Tech stack** : Kotlin + Jetpack Compose — choix moderne, moins de boilerplate
-- **Compatibilité** : Android 8+ (API 26+) — foreground service + BT API stables
-- **Déploiement** : USB direct uniquement, pas de Play Store
-- **Audio** : Balance system-wide requise, pas per-app — c'est le point critique de faisabilité
-- **Batterie** : Impact minimal grâce au foreground service (pas de polling)
+- **Tech stack** : Kotlin + Jetpack Compose
+- **Compatibilité** : Android 8+ (API 26+) — compileSdk/targetSdk 35
+- **Déploiement** : USB direct uniquement
+- **Audio** : DynamicsProcessing session 0 global — une seule app AudioEffect peut contrôler session 0 à la fois
+- **Batterie** : Impact minimal (foreground service sans polling)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Kotlin + Compose | Standard moderne Android, moins de boilerplate, recommandé pour nouveaux projets | — Pending |
-| Faisabilité avant dev | L'approche balance globale (AudioEffect session 0, AccessibilityService) n'est pas garantie — valider avant de s'engager | — Pending |
-| Android 8+ minimum | API foreground service et BT stables à partir d'API 26 | — Pending |
-| Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | — Pending |
+| Kotlin + Compose | Standard moderne Android, moins de boilerplate | ✓ Good |
+| Faisabilité avant dev (Phase 1 POC) | L'approche balance globale n'est pas garantie — valider avant de s'engager | ✓ Good — session 0 fonctionne |
+| DynamicsProcessing session 0 global | Seule API avec gain per-channel. Config toutes stages false obligatoire. | ✓ Good — validé sur Pixel 10/Android 16 |
+| Service always-on (pas stop/restart) | Android 12+ interdit FGS start depuis BT broadcast. Service permanent seul viable. | ✓ Good |
+| DataStore Preferences (pas SharedPrefs) | Async, coroutine-native, pas de risque ANR | ✓ Good |
+| BOOT_COMPLETED inclus en v1 | Simple à ajouter, critique pour l'UX (balance prête dès le boot) | ✓ Good |
+| DP auto-recovery | Recréer le DP si hasControl() retourne false (conflit avec autre app) | ✓ Good |
+| Android 8+ minimum | API foreground service et BT stables à partir d'API 26 | ✓ Good |
+| Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | ✓ Good |
 
 ---
-*Last updated: 2026-04-06 after Phase 3 (UI) complete — all 4 phases done, v1.0 milestone complete*
+*Last updated: 2026-04-07 after v1.0 milestone*
