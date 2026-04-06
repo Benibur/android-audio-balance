@@ -77,8 +77,8 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
                 val balance = repository.getBalance(mac)
                 sendBalanceToService(balance)
             } else {
-                // Reset to center immediately
-                sendBalanceToService(0f)
+                // Reset audio to center WITHOUT saving (preserve stored balance)
+                sendResetToService()
             }
         }
     }
@@ -89,6 +89,18 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
         val intent = Intent(context, AudioBalanceService::class.java).apply {
             putExtra("action", "seed_balance")
             putExtra("balance", balance)
+        }
+        try {
+            context.startForegroundService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("DeviceListViewModel", "startForegroundService failed: ${e.message}")
+        }
+    }
+
+    private fun sendResetToService() {
+        val context = getApplication<Application>()
+        val intent = Intent(context, AudioBalanceService::class.java).apply {
+            putExtra("action", "reset_audio_only")
         }
         try {
             context.startForegroundService(intent)

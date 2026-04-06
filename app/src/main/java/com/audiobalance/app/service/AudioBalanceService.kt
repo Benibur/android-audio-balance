@@ -83,6 +83,8 @@ class AudioBalanceService : LifecycleService() {
         // intent can be null when START_STICKY restarts the service after being killed
         super.onStartCommand(intent, flags, startId)
 
+        Log.d(TAG, "onStartCommand: action=${intent?.getStringExtra("action")} extras=${intent?.extras?.keySet()?.toList()}")
+
         if (intent?.getStringExtra("action") == "seed_balance") {
             val balance = intent.getFloatExtra("balance", 0f)
             val mac = currentDeviceMac
@@ -102,6 +104,15 @@ class AudioBalanceService : LifecycleService() {
             } else {
                 Log.w(TAG, "No device connected — cannot apply balance")
             }
+        }
+
+        if (intent?.getStringExtra("action") == "reset_audio_only") {
+            // Reset DP to center without saving to DataStore (preserves stored balance)
+            dp?.let {
+                it.setInputGainbyChannel(0, 0f)
+                it.setInputGainbyChannel(1, 0f)
+            }
+            Log.d(TAG, "Audio reset to center (no save)")
         }
 
         return START_STICKY
