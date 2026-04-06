@@ -39,8 +39,9 @@ Declared values in `dp` (Android density-independent pixels, equivalent to CSS p
 |-------|-------|-------|
 | xs | 4dp | Icon gaps, chip padding, divider insets |
 | sm | 8dp | Between elements within a card (already used in MainActivity `spacedBy(8.dp)`) |
+| sm-plus | 12dp | Device list vertical padding (`contentPadding vertical`) and inter-card gap (`Arrangement.spacedBy(12dp)`) — tighter than `md` to keep more cards visible on screen |
 | md | 16dp | Card internal padding, screen horizontal padding (already used in MainActivity `padding(16.dp)`) |
-| lg | 24dp | Between cards in the device list |
+| lg | 24dp | Between sections or grouped card clusters if needed |
 | xl | 32dp | Permission screen vertical centering padding |
 | 2xl | 48dp | Permission screen illustration top margin |
 | 3xl | 64dp | Not used in this phase |
@@ -98,6 +99,8 @@ Material3 dynamic color is primary. The hex values below are the static fallback
 
 ### Screen 1: Permission Onboarding (`PermissionScreen`)
 
+**Focal point:** The "Grant permissions" filled button is the single focal element — it sits at the bottom of a centered column against a clear background with no competing interactive elements.
+
 Shown on first launch only. One-shot — never re-shown once all permissions granted.
 
 **Layout:** Single full-screen Composable, centered column.
@@ -119,10 +122,12 @@ Shown on first launch only. One-shot — never re-shown once all permissions gra
 
 **Denial state (inline, same screen):**
 - Replace body text with: "Permission denied. Tap 'Open settings' to grant it manually."
-- Replace CTA with two buttons stacked: "Open settings" (filled) + "Retry" (outlined)
+- Replace CTA with two buttons stacked: "Open settings" (filled) + "Retry permissions" (outlined)
 - "Open settings" launches `Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)`
 
 ### Screen 2: Device List (`DeviceListScreen`)
+
+**Focal point:** The connected device card at index 0 is the dominant element — it renders at full opacity with a `colorScheme.primary` border while all other cards recede at 0.72 alpha, directing attention to the currently active device.
 
 Main screen. Only screen visible after permissions granted.
 
@@ -214,7 +219,7 @@ Slider parameters:
 | `Scaffold` | `androidx.compose.material3` | Screen layout |
 | `LazyColumn` | `androidx.compose.foundation.lazy` | Device list |
 | `Button` (filled) | `androidx.compose.material3` | Permission CTA |
-| `OutlinedButton` | `androidx.compose.material3` | "Retry" on denial |
+| `OutlinedButton` | `androidx.compose.material3` | "Retry permissions" on denial |
 | `SuggestionChip` | `androidx.compose.material3` | "Connected" badge |
 | `Icons.Outlined.*` | `androidx.compose.material:material-icons-extended` | Bluetooth, notifications icons |
 | `NavHost` | `androidx.navigation.compose` | Screen routing |
@@ -231,7 +236,7 @@ Slider parameters:
 | Permission screen body | "To detect your Bluetooth headphones and run in the background, this app needs two permissions." |
 | Permission denial message | "Permission denied. Tap 'Open settings' to grant it manually." |
 | Open settings button | "Open settings" |
-| Retry button | "Retry" |
+| Retry button | "Retry permissions" |
 | Empty state heading | "No devices yet" |
 | Empty state body | "Connect a Bluetooth device to see it here." |
 | Connected badge | "Connected" |
