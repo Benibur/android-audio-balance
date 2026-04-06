@@ -22,21 +22,12 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 
 ### Active
 
-- [ ] Export/import des réglages en JSON
-- [ ] Reset de tous les coefficients
-- [ ] i18n avec 10 langues
-- [ ] Section "À propos"
-- [ ] FAQ expliquant la finalité de l'app
-- [ ] Nicknames personnalisés par device
-- [ ] Timestamp du dernier apply par device
-- [ ] Bouton "Test balance" pour prévisualiser
-- [ ] Action "Apply now" dans la notification
-- [ ] Quick Settings Tile pour toggle rapide
-- [ ] Toggle global on/off (kill switch)
+- [ ] Gain offset par device — slider dB pour atténuer/booster le volume global via DynamicsProcessing, persisté par MAC
+- [ ] Écran FAQ — explication de l'app, mention open source, lien vers le repo GitHub
+- [ ] Repo GitHub public — README, licence MIT, code source sur github.com/Benibur/android-audio-balance
 
 ### Out of Scope
 
-- Contrôle du volume minimal — besoin séparé, à traiter dans un autre projet
 - Égaliseur multi-bandes — Wavelet existe déjà pour ça
 - Support des écouteurs filaires — uniquement Bluetooth
 - Support du speaker interne — hors du cas d'usage
@@ -44,6 +35,18 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 - AutoEQ database — le problème ici est le déséquilibre usine, pas la réponse fréquentielle
 - Sync cloud — overkill pour usage personnel ; JSON export/import suffit
 - Profiles per-app — nécessite DUMP permission + monitoring de sessions ; trop complexe
+- Export/import JSON, reset coefficients, nicknames, timestamps — déféré post-v1.1
+- i18n 10 langues — déféré post-v1.1
+- Bouton "Test balance", action notification, Quick Settings Tile, toggle global — déféré post-v1.1
+
+## Current Milestone: v1.1 Gain Offset + FAQ + Open Source
+
+**Goal:** Ajouter un contrôle de gain global par device et publier l'app en open source avec FAQ.
+
+**Target features:**
+- Gain offset par device (slider dB, DynamicsProcessing)
+- Écran FAQ (explication app + open source)
+- Repo GitHub public (README + licence MIT)
 
 ## Context
 
@@ -77,4 +80,4 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 | Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | ✓ Good |
 
 ---
-*Last updated: 2026-04-07 after v1.0 milestone*
+*Last updated: 2026-04-07 after v1.1 milestone start*
