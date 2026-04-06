@@ -30,8 +30,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Persistence
 
-- [ ] **DATA-01**: Les profils de balance sont stockés de façon persistante (MAC → coefficient)
-- [ ] **DATA-02**: Les profils survivent aux redémarrages de l'app
+- [x] **DATA-01**: Les profils de balance sont stockés de façon persistante (MAC → coefficient)
+- [x] **DATA-02**: Les profils survivent aux redémarrages de l'app
 
 ### UI
 
@@ -90,8 +90,8 @@ Requirements for initial release. Each maps to roadmap phases.
 | BT-03 | Phase 2 | Complete |
 | SVC-01 | Phase 2 | Complete |
 | SVC-02 | Phase 2 | Complete |
-| DATA-01 | Phase 2 | Pending |
-| DATA-02 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
+| DATA-02 | Phase 2 | Complete |
 | UI-01 | Phase 3 | Pending |
 | UI-02 | Phase 3 | Pending |
 | UI-03 | Phase 3 | Pending |

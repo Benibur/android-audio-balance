@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Dev Environment** - Android Studio, SDK, emulator, ADB setup — everything needed to build and deploy (completed 2026-04-04)
 - [x] **Phase 1: AudioEffect POC** - Validate that balance can be applied system-wide on target hardware before any service work (completed 2026-04-05)
-- [ ] **Phase 2: Service + Persistence** - Foreground service, BT detection, DataStore persistence, and balance application wired together
+- [x] **Phase 2: Service + Persistence** - Foreground service, BT detection, DataStore persistence, and balance application wired together (completed 2026-04-06)
 - [ ] **Phase 3: UI** - Compose screens for device list, balance sliders, toggles, and permission flows
 
 ## Phase Details
@@ -84,5 +84,5 @@ Phases execute in numeric order: 0 → 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 0. Dev Environment | 2/2 | Complete   | 2026-04-04 |
 | 1. AudioEffect POC | 3/3 | Complete   | 2026-04-05 |
-| 2. Service + Persistence | 2/3 | In Progress|  |
+| 2. Service + Persistence | 3/3 | Complete   | 2026-04-06 |
 | 3. UI | 0/? | Not started | - |

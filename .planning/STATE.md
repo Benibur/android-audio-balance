@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-04-06T10:31:19.227Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-06T11:02:50.769Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement — sans intervention manuelle
-**Current focus:** Phase 02 — service-persistence
+**Current focus:** Phase 03 — UI (next phase)
 
 ## Current Position
 
-Phase: 02 (service-persistence) — EXECUTING
-Plan: 2 of 3
+Phase: 02 (service-persistence) — COMPLETE (3/3 plans done)
+Phase: 03 (UI) — NOT STARTED
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Plan: 2 of 3
 | Phase 01-audioeffect-poc P03 | checkpoint | 2 tasks | 1 files |
 | Phase 02-service-persistence P01 | 595s | 3 tasks | 6 files |
 | Phase 02-service-persistence P02 | 60 | 3 tasks | 4 files |
+| Phase 02-service-persistence P03 | 90 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: RECEIVER_EXPORTED required for system BT A2DP broadcasts — RECEIVER_NOT_EXPORTED silently blocks them on API 33+
 - [Phase 02-02]: resetBalanceToCenter() sets both DP channels to 0f but does not release DynamicsProcessing — DP stays alive between devices
 - [Phase 02-02]: New unknown BT devices saved with balance 0f immediately on first connect — no separate registration step needed
+- [Phase 02-service-persistence]: AudioBalanceService android:exported=true required on Android 12+ for adb am startservice — Phase 3 should review for distribution hardening
+- [Phase 02-service-persistence]: checkCurrentlyConnectedDevices() must set currentDeviceMac from proxy callback — required for seed commands and any startup-time logic that checks currentDeviceMac
+- [Phase 02-service-persistence]: seed_balance handler applies DP gain immediately (setInputGainbyChannel + notification update) — saves to DataStore and applies at once, no BT reconnect needed
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T10:31:19.225Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-04-06T11:02:50.766Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
