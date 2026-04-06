@@ -135,7 +135,7 @@ class AudioBalanceService : LifecycleService() {
         val filter = IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
         btReceiver = BtA2dpReceiver { device, state -> handleBtEvent(device, state) }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(btReceiver, filter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(btReceiver, filter, RECEIVER_EXPORTED)
         } else {
             registerReceiver(btReceiver, filter)
         }
