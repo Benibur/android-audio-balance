@@ -40,7 +40,9 @@ fun DeviceCard(
     device: DeviceUiState,
     onBalanceChange: (Float) -> Unit,
     onBalanceFinished: (Float) -> Unit,
-    onAutoApplyToggle: (Boolean) -> Unit
+    onAutoApplyToggle: (Boolean) -> Unit,
+    onGainOffsetChange: (Float) -> Unit,
+    onGainOffsetFinished: (Float) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -165,6 +167,64 @@ fun DeviceCard(
 
                 Text(
                     text = stringResource(R.string.slider_label_right),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Row 4 — Gain offset label
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val gainOffsetInt = device.gainOffset.roundToInt()
+            val gainLabelColor = if (gainOffsetInt == 0) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+
+            Text(
+                text = stringResource(R.string.gain_offset_label, gainOffsetInt),
+                style = MaterialTheme.typography.labelMedium,
+                color = gainLabelColor,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+
+            // Row 5 — Gain offset slider
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(sliderAlpha),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "-12",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Convert -12..0 dB to 0..1 for Slider API
+                val gainSliderValue = (device.gainOffset + 12f) / 12f
+
+                Slider(
+                    value = gainSliderValue.coerceIn(0f, 1f),
+                    onValueChange = { normalized ->
+                        val gainDb = normalized * 12f + (-12f)
+                        onGainOffsetChange(gainDb)
+                    },
+                    onValueChangeFinished = {
+                        onGainOffsetFinished(device.gainOffset)
+                    },
+                    enabled = device.autoApplyEnabled,
+                    steps = 11,
+                    valueRange = 0f..1f,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "0",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

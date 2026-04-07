@@ -102,6 +102,12 @@ fun DeviceListScreen(
                         },
                         onAutoApplyToggle = { enabled ->
                             viewModel.onAutoApplyToggle(device.mac, enabled)
+                        },
+                        onGainOffsetChange = { dB ->
+                            viewModel.onGainOffsetChange(device.mac, dB)
+                        },
+                        onGainOffsetFinished = { dB ->
+                            viewModel.onGainOffsetFinished(device.mac, dB)
                         }
                     )
                 }

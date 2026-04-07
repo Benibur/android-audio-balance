@@ -21,6 +21,7 @@
     <string name="balance_right">R+%1$d</string>
     <string name="slider_label_left">L</string>
     <string name="slider_label_right">R</string>
+    <string name="gain_offset_label">Min volume adjustment: %1$d dB</string>
     <string name="auto_apply_content_description">Auto-apply for %1$s</string>
 
     <!-- Error states -->
