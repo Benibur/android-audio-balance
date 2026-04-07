@@ -71,24 +71,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GAIN-01 | — | Pending |
-| GAIN-02 | — | Pending |
-| GAIN-03 | — | Pending |
-| GAIN-04 | — | Pending |
-| GAIN-05 | — | Pending |
-| FAQ-01 | — | Pending |
-| FAQ-02 | — | Pending |
-| FAQ-03 | — | Pending |
-| FAQ-04 | — | Pending |
-| OSS-01 | — | Pending |
-| OSS-02 | — | Pending |
-| OSS-03 | — | Pending |
+| GAIN-01 | Phase 4 | Pending |
+| GAIN-02 | Phase 4 | Pending |
+| GAIN-03 | Phase 4 | Pending |
+| GAIN-04 | Phase 4 | Pending |
+| GAIN-05 | Phase 4 | Pending |
+| FAQ-01 | Phase 5 | Pending |
+| FAQ-02 | Phase 5 | Pending |
+| FAQ-03 | Phase 5 | Pending |
+| FAQ-04 | Phase 5 | Pending |
+| OSS-01 | Phase 6 | Pending |
+| OSS-02 | Phase 6 | Pending |
+| OSS-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initial definition*
+*Last updated: 2026-04-07 after roadmap creation (phases 4-6 assigned)*
