@@ -1,108 +1,94 @@
 # Requirements: Bluetooth Audio Balance Controller
 
-**Defined:** 2026-04-01
-**Core Value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement
+**Defined:** 2026-04-07
+**Core Value:** Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configurée s'applique automatiquement — sans intervention manuelle.
 
-## v1 Requirements
+## v1.1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for v1.1 milestone. Each maps to roadmap phases.
 
-### Feasibility
+### Gain Offset
 
-- [x] **FEAS-01**: AudioEffect session 0 applique un offset de balance stéréo gauche/droite mesurable sur le device physique de test
-- [x] **FEAS-02**: L'approche de fallback est identifiée si session 0 échoue (AccessibilityService, DUMP permission, ou per-session)
+- [ ] **GAIN-01**: User can adjust a per-device gain offset slider (dB) in the device card
+- [ ] **GAIN-02**: Gain offset is persisted per MAC address and restored on reconnect
+- [ ] **GAIN-03**: Gain offset and balance are composed into a single DynamicsProcessing call per channel
+- [ ] **GAIN-04**: Gain offset auto-applies on BT connect (same behavior as balance)
+- [ ] **GAIN-05**: Notification displays gain offset when non-zero
 
-### Audio
+### FAQ
 
-- [x] **AUDIO-01**: User peut ajuster la balance stéréo (-100% gauche à +100% droite) par device BT via un slider
-- [x] **AUDIO-02**: Le coefficient de balance est appliqué system-wide au flux audio media quand le device BT est connecté
+- [ ] **FAQ-01**: User can access a FAQ screen from the device list (info icon)
+- [ ] **FAQ-02**: FAQ explains what the app does and why
+- [ ] **FAQ-03**: FAQ mentions open source and links to the GitHub repo
+- [ ] **FAQ-04**: FAQ includes troubleshooting for AudioEffect session 0 conflicts
 
-### Bluetooth
+### Open Source
 
-- [x] **BT-01**: L'app détecte automatiquement les connexions A2DP Bluetooth (adresse MAC)
-- [x] **BT-02**: L'app détecte automatiquement les déconnexions A2DP Bluetooth
-- [x] **BT-03**: Le coefficient de balance stocké est auto-appliqué à la connexion du device BT
+- [ ] **OSS-01**: GitHub repo `Benibur/android-audio-balance` created with MIT license
+- [ ] **OSS-02**: README with app description, Android 8+ requirement, build instructions, session 0 warning
+- [ ] **OSS-03**: Git history audited for secrets before first public push
 
-### Service
+## Future Requirements
 
-- [x] **SVC-01**: Un foreground service (`connectedDevice`) maintient l'app active en arrière-plan
-- [x] **SVC-02**: Une notification persistante indique l'état du service (device connecté, balance active)
+Deferred from v1.0 active list. Tracked but not in current roadmap.
 
-### Persistence
+### Quality of Life
 
-- [x] **DATA-01**: Les profils de balance sont stockés de façon persistante (MAC → coefficient)
-- [x] **DATA-02**: Les profils survivent aux redémarrages de l'app
+- **QOL-01**: Export/import des réglages en JSON
+- **QOL-02**: Reset de tous les coefficients
+- **QOL-03**: Nicknames personnalisés par device
+- **QOL-04**: Timestamp du dernier apply par device
 
-### UI
+### UX Enhancements
 
-- [x] **UI-01**: L'utilisateur voit la liste des devices BT connus avec leur coefficient de balance
-- [x] **UI-02**: L'utilisateur peut ajuster la balance via un slider horizontal par device
-- [x] **UI-03**: L'utilisateur peut activer/désactiver l'auto-apply par device via un toggle
-- [x] **UI-04**: Le device actuellement connecté est visuellement distingué dans la liste
-- [x] **UI-05**: Les permissions runtime nécessaires sont demandées avec explication claire
+- **UX-01**: Bouton "Test balance" pour prévisualiser
+- **UX-02**: Action "Apply now" dans la notification
+- **UX-03**: Quick Settings Tile pour toggle rapide
+- **UX-04**: Toggle global on/off (kill switch)
 
-## v2 Requirements
+### Localization
 
-### Lifecycle
-
-- **LIFE-01**: L'app démarre automatiquement au boot (BOOT_COMPLETED)
-- **LIFE-02**: Toggle global activation/désactivation (kill switch)
-
-### Data
-
-- **DATA-03**: Export des réglages en JSON
-- **DATA-04**: Import des réglages depuis JSON
-
-### UI Enhancements
-
-- **UIX-01**: Bouton "Test balance" pour prévisualiser sans reconnecter
-- **UIX-02**: Nicknames personnalisés par device
-- **UIX-03**: Timestamp du dernier apply par device
-- **UIX-04**: Action "Apply now" dans la notification
-
-### Advanced
-
-- **ADV-01**: Quick Settings Tile pour toggle rapide
+- **I18N-01**: i18n avec 10 langues
 
 ## Out of Scope
 
+Explicitly excluded. Documented to prevent scope creep.
+
 | Feature | Reason |
 |---------|--------|
-| Contrôle du volume | Besoin séparé, problème différent — à traiter dans un autre projet |
-| Égaliseur multi-bandes | Complexité disproportionnée ; Wavelet existe déjà pour ça |
-| Support écouteurs filaires | Scope limité au BT (problème réel = écouteurs BT déséquilibrés) |
+| Égaliseur multi-bandes | Wavelet existe déjà pour ça |
+| Support écouteurs filaires | Uniquement Bluetooth |
 | Support speaker interne | Hors du cas d'usage |
 | Publication Play Store | Déploiement USB direct uniquement |
-| AutoEQ database | Wavelet le fait déjà ; le problème ici est le déséquilibre usine, pas la réponse fréquentielle |
+| AutoEQ database | Le problème est le déséquilibre usine, pas la réponse fréquentielle |
 | Sync cloud | Overkill pour usage personnel ; JSON export/import suffit |
-| Profiles per-app | Nécessite DUMP permission + monitoring de sessions ; trop complexe pour v1 |
+| Profiles per-app | Nécessite DUMP permission + monitoring de sessions ; trop complexe |
+| Compression dynamique (min/max indépendants) | Approche A (gain offset unique) suffit ; compression = artefacts audio |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FEAS-01 | Phase 1 | Complete |
-| FEAS-02 | Phase 1 | Complete |
-| AUDIO-01 | Phase 3 | Complete |
-| AUDIO-02 | Phase 2 | Complete |
-| BT-01 | Phase 2 | Complete |
-| BT-02 | Phase 2 | Complete |
-| BT-03 | Phase 2 | Complete |
-| SVC-01 | Phase 2 | Complete |
-| SVC-02 | Phase 2 | Complete |
-| DATA-01 | Phase 2 | Complete |
-| DATA-02 | Phase 2 | Complete |
-| UI-01 | Phase 3 | Complete |
-| UI-02 | Phase 3 | Complete |
-| UI-03 | Phase 3 | Complete |
-| UI-04 | Phase 3 | Complete |
-| UI-05 | Phase 3 | Complete |
+| GAIN-01 | — | Pending |
+| GAIN-02 | — | Pending |
+| GAIN-03 | — | Pending |
+| GAIN-04 | — | Pending |
+| GAIN-05 | — | Pending |
+| FAQ-01 | — | Pending |
+| FAQ-02 | — | Pending |
+| FAQ-03 | — | Pending |
+| FAQ-04 | — | Pending |
+| OSS-01 | — | Pending |
+| OSS-02 | — | Pending |
+| OSS-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v1.1 requirements: 12 total
+- Mapped to phases: 0
+- Unmapped: 12 ⚠️
 
 ---
-*Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after roadmap creation — traceability complete*
+*Requirements defined: 2026-04-07*
+*Last updated: 2026-04-07 after initial definition*
