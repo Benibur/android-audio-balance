@@ -91,8 +91,8 @@ class AudioBalanceService : LifecycleService() {
             if (mac != null) {
                 serviceScope.launch {
                     balanceRepository.saveBalance(mac, balance)
+                    val gainOffset = balanceRepository.getGainOffset(mac)
                     // Apply immediately without requiring BT reconnect
-                    val (leftDb, rightDb) = BalanceMapper.toGainDb(balance.roundToInt())
                     val dpInstance = dp
                     if (dpInstance == null) {
                         Log.w(TAG, "DP is null — recreating")
@@ -105,24 +105,49 @@ class AudioBalanceService : LifecycleService() {
                             it.release()
                             createDpInstance()
                         }
-                        dp?.setInputGainbyChannel(0, leftDb)
-                        dp?.setInputGainbyChannel(1, rightDb)
-                        Log.d(TAG, "Applied balance=$balance for mac=$mac (L=${leftDb}dB R=${rightDb}dB hasControl=${dp?.hasControl()})")
+                        applyGains(balance, gainOffset)
+                        Log.d(TAG, "Applied balance=$balance gainOffset=$gainOffset for mac=$mac")
                     }
-                    _stateFlow.value = _stateFlow.value.copy(currentBalance = balance)
-                    updateNotification(formatNotificationText(currentDeviceName, balance.roundToInt()))
+                    _stateFlow.value = _stateFlow.value.copy(currentBalance = balance, currentGainOffset = gainOffset)
+                    updateNotification(formatNotificationText(currentDeviceName, balance.roundToInt(), gainOffset))
                 }
             } else {
                 Log.w(TAG, "No device connected — cannot apply balance")
             }
         }
 
+        if (intent?.getStringExtra("action") == "seed_gain_offset") {
+            val gainOffsetDb = intent.getFloatExtra("gain_offset", 0f)
+            val mac = currentDeviceMac
+            if (mac != null) {
+                serviceScope.launch {
+                    balanceRepository.saveGainOffset(mac, gainOffsetDb)
+                    val balance = balanceRepository.getBalance(mac)
+                    val dpInstance = dp
+                    if (dpInstance == null) {
+                        Log.w(TAG, "DP is null — recreating")
+                        createDpInstance()
+                    }
+                    dp?.let {
+                        val hasCtrl = it.hasControl()
+                        if (!hasCtrl) {
+                            Log.w(TAG, "DP lost control — recreating")
+                            it.release()
+                            createDpInstance()
+                        }
+                    }
+                    applyGains(balance, gainOffsetDb)
+                    _stateFlow.value = _stateFlow.value.copy(currentGainOffset = gainOffsetDb)
+                    updateNotification(formatNotificationText(currentDeviceName, balance.roundToInt(), gainOffsetDb))
+                }
+            } else {
+                Log.w(TAG, "No device connected — cannot apply gain offset")
+            }
+        }
+
         if (intent?.getStringExtra("action") == "reset_audio_only") {
             // Reset DP to center without saving to DataStore (preserves stored balance)
-            dp?.let {
-                it.setInputGainbyChannel(0, 0f)
-                it.setInputGainbyChannel(1, 0f)
-            }
+            applyGains(0f, 0f)
             Log.d(TAG, "Audio reset to center (no save)")
         }
 
@@ -179,6 +204,23 @@ class AudioBalanceService : LifecycleService() {
             try { it.release() } catch (_: RuntimeException) {}
         }
         dp = null
+    }
+
+    // ================================================================
+    // Gain application — single entry point for all DP writes
+    // ================================================================
+
+    private fun applyGains(balance: Float, gainOffsetDb: Float) {
+        val (balanceLeft, balanceRight) = BalanceMapper.toGainDb(balance.roundToInt())
+        val leftFinal  = balanceLeft  + gainOffsetDb
+        val rightFinal = balanceRight + gainOffsetDb
+        try {
+            dp?.setInputGainbyChannel(0, leftFinal)
+            dp?.setInputGainbyChannel(1, rightFinal)
+            Log.d(TAG, "applyGains: balance=$balance gainOffset=$gainOffsetDb -> L=${leftFinal}dB R=${rightFinal}dB")
+        } catch (e: RuntimeException) {
+            Log.e(TAG, "setInputGainbyChannel failed: ${e.message}")
+        }
     }
 
     // ================================================================
@@ -250,37 +292,39 @@ class AudioBalanceService : LifecycleService() {
             val balance = balanceRepository.getBalance(mac)
             balanceRepository.saveBalance(mac, balance)
             deviceName?.let { balanceRepository.saveDeviceName(mac, it) }
-            _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = 0f)
+            _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = 0f, currentGainOffset = 0f)
             updateNotification(formatNotificationText(deviceName, 0))
             Log.d(TAG, "AutoApply disabled for mac=$mac — skipping balance")
             return
         }
 
         val balance = balanceRepository.getBalance(mac)  // 0f for unknown
+        val gainOffset = balanceRepository.getGainOffset(mac)
         // Save unknown devices with balance 0 to make them "known"
         balanceRepository.saveBalance(mac, balance)
         deviceName?.let { balanceRepository.saveDeviceName(mac, it) }
 
-        val (leftDb, rightDb) = BalanceMapper.toGainDb(balance.toInt())
-        dp?.let {
-            it.setInputGainbyChannel(0, leftDb)
-            it.setInputGainbyChannel(1, rightDb)
-            Log.d(TAG, "Balance applied: mac=$mac balance=${balance.toInt()} L=${leftDb}dB R=${rightDb}dB")
+        val dpInstance = dp
+        if (dpInstance == null) {
+            Log.w(TAG, "DP is null — recreating")
+            createDpInstance()
         }
+        dp?.let {
+            val hasCtrl = it.hasControl()
+            if (!hasCtrl) {
+                Log.w(TAG, "DP lost control — recreating")
+                it.release()
+                createDpInstance()
+            }
+        }
+        applyGains(balance, gainOffset)
 
-        _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = balance)
-        updateNotification(formatNotificationText(deviceName, balance.toInt()))
+        _stateFlow.value = ServiceState(connectedDeviceMac = mac, connectedDeviceName = deviceName, currentBalance = balance, currentGainOffset = gainOffset)
+        updateNotification(formatNotificationText(deviceName, balance.toInt(), gainOffset))
     }
 
     private fun resetBalanceToCenter() {
-        dp?.let {
-            try {
-                it.setInputGainbyChannel(0, 0f)
-                it.setInputGainbyChannel(1, 0f)
-            } catch (e: RuntimeException) {
-                Log.e(TAG, "Reset to center failed: ${e.message}")
-            }
-        }
+        applyGains(0f, 0f)
     }
 
     private fun checkCurrentlyConnectedDevices() {
@@ -357,13 +401,14 @@ class AudioBalanceService : LifecycleService() {
             .notify(NOTIFICATION_ID, buildNotification(contentText))
     }
 
-    fun formatNotificationText(deviceName: String?, balance: Int): String {
+    fun formatNotificationText(deviceName: String?, balance: Int, gainOffsetDb: Float = 0f): String {
         val name = deviceName?.takeIf { it.isNotBlank() } ?: "BT Device"
         val balanceText = when {
             balance > 0  -> "R+${balance}%"
             balance < 0  -> "L+${-balance}%"
             else         -> "Center"
         }
-        return "$name \u2022 Balance: $balanceText"
+        val gainText = if (gainOffsetDb != 0f) " \u2022 Vol: ${gainOffsetDb.roundToInt()} dB" else ""
+        return "$name \u2022 Balance: $balanceText$gainText"
     }
 }

@@ -27,15 +27,16 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
         repository.getAllDevicesFlow(),
         _sliderOverrides
     ) { serviceState, devices, overrides ->
-        val deviceList = devices.map { (mac, balance, autoApply) ->
-            val isConnected = mac == serviceState.connectedDeviceMac
-            val displayBalance = overrides[mac] ?: balance
+        val deviceList = devices.map { deviceEntry ->
+            val isConnected = deviceEntry.mac == serviceState.connectedDeviceMac
+            val displayBalance = overrides[deviceEntry.mac] ?: deviceEntry.balance
             DeviceUiState(
-                mac = mac,
-                name = repository.getDeviceName(mac) ?: mac,
+                mac = deviceEntry.mac,
+                name = repository.getDeviceName(deviceEntry.mac) ?: deviceEntry.mac,
                 balance = displayBalance,
-                autoApplyEnabled = autoApply,
-                isConnected = isConnected
+                autoApplyEnabled = deviceEntry.autoApply,
+                isConnected = isConnected,
+                gainOffset = deviceEntry.gainOffset
             )
         }.sortedWith(compareByDescending<DeviceUiState> { it.isConnected }.thenBy { it.name })
 
