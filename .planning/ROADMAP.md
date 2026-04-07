@@ -39,7 +39,11 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. When the device reconnects, the saved gain offset is applied together with balance in a single DynamicsProcessing call — no separate apply steps
   4. The foreground notification displays the current gain offset value when it is non-zero
   5. Gain offset survives app restart and phone reboot — the persisted value is restored from DataStore on reconnect
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Data layer + service: DeviceEntry, repository, applyGains helper, seed_gain_offset, notification
+- [ ] 04-02-PLAN.md — ViewModel + UI: gain offset override flow, DeviceCard slider, DeviceListScreen wiring
 
 ### Phase 5: FAQ Screen
 **Goal**: Users can open a FAQ/About screen that explains the app and links to the GitHub repo
@@ -70,6 +74,6 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 1. AudioEffect POC | v1.0 | 3/3 | Complete | 2026-04-05 |
 | 2. Service + Persistence | v1.0 | 3/3 | Complete | 2026-04-06 |
 | 3. UI | v1.0 | 4/4 | Complete | 2026-04-06 |
-| 4. Gain Offset | v1.1 | 0/? | Not started | - |
+| 4. Gain Offset | v1.1 | 0/2 | Planned | - |
 | 5. FAQ Screen | v1.1 | 0/? | Not started | - |
 | 6. Open Source | v1.1 | 0/? | Not started | - |
