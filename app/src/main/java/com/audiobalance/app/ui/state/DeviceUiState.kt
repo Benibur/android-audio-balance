@@ -5,7 +5,8 @@ data class DeviceUiState(
     val name: String,
     val balance: Float,          // -100f to +100f
     val autoApplyEnabled: Boolean,
-    val isConnected: Boolean
+    val isConnected: Boolean,
+    val gainOffset: Float = 0f    // dB, -12f to 0f
 )
 
 data class DeviceListUiState(
@@ -16,5 +17,6 @@ data class DeviceListUiState(
 data class ServiceState(
     val connectedDeviceMac: String? = null,
     val connectedDeviceName: String? = null,
-    val currentBalance: Float = 0f
+    val currentBalance: Float = 0f,
+    val currentGainOffset: Float = 0f
 )

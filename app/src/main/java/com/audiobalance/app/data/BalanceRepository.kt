@@ -10,6 +10,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
+data class DeviceEntry(
+    val mac: String,
+    val balance: Float,       // -100f to +100f
+    val autoApply: Boolean,
+    val gainOffset: Float     // dB, default 0f (range -12f to 0f)
+)
+
 class BalanceRepository(private val context: Context) {
 
     companion object {
@@ -19,6 +26,7 @@ class BalanceRepository(private val context: Context) {
     private fun balanceKey(mac: String) = floatPreferencesKey("balance_${mac.replace(":", "_")}")
     private fun autoApplyKey(mac: String) = booleanPreferencesKey("auto_apply_${mac.replace(":", "_")}")
     private fun deviceNameKey(mac: String) = stringPreferencesKey("name_${mac.replace(":", "_")}")
+    private fun gainOffsetKey(mac: String) = floatPreferencesKey("gain_offset_${mac.replace(":", "_")}")
 
     /** Returns stored balance for MAC, or 0f if unknown device */
     suspend fun getBalance(mac: String): Float {
@@ -68,15 +76,29 @@ class BalanceRepository(private val context: Context) {
             .first()
     }
 
-    /** Flow of all known devices: each entry is (mac, balance, autoApply) */
-    fun getAllDevicesFlow(): Flow<List<Triple<String, Float, Boolean>>> = context.dataStore.data.map { prefs ->
+    suspend fun getGainOffset(mac: String): Float {
+        return context.dataStore.data
+            .map { prefs -> prefs[gainOffsetKey(mac)] ?: 0f }
+            .first()
+    }
+
+    suspend fun saveGainOffset(mac: String, gainOffsetDb: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[gainOffsetKey(mac)] = gainOffsetDb
+        }
+        Log.d(TAG, "Saved gainOffset: mac=$mac gainOffset=$gainOffsetDb")
+    }
+
+    /** Flow of all known devices: each entry is a DeviceEntry */
+    fun getAllDevicesFlow(): Flow<List<DeviceEntry>> = context.dataStore.data.map { prefs ->
         prefs.asMap()
             .filterKeys { it.name.startsWith("balance_") }
             .map { (key, value) ->
                 val mac = key.name.removePrefix("balance_").replace("_", ":")
                 val balance = (value as? Float) ?: 0f
                 val autoApply = prefs[autoApplyKey(mac)] ?: true
-                Triple(mac, balance, autoApply)
+                val gainOffset = prefs[gainOffsetKey(mac)] ?: 0f
+                DeviceEntry(mac, balance, autoApply, gainOffset)
             }
     }
 }
