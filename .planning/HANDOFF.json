@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-07T19:39:36.423Z",
+  "phase": "04",
+  "phase_name": "gain-offset",
+  "phase_dir": ".planning/phases/04-gain-offset",
+  "plan": 2,
+  "task": 3,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "plan": "04-01", "name": "Wave 0 tests — gain composition and notification formatting", "status": "done", "commit": "c93132d"},
+    {"id": 2, "plan": "04-01", "name": "Data layer — DeviceEntry, repository methods, ServiceState update", "status": "done", "commit": "c55564b"},
+    {"id": 3, "plan": "04-01", "name": "Service layer — applyGains helper, seed_gain_offset, notification update", "status": "done", "commit": "ef1ee73"},
+    {"id": 4, "plan": "04-02", "name": "Slider normalization test + ViewModel gain offset flow", "status": "done", "commit": "ac66c88"},
+    {"id": 5, "plan": "04-02", "name": "DeviceCard gain slider + DeviceListScreen wiring + strings", "status": "done", "commit": "2cd443b"},
+    {"id": 6, "plan": "04-02", "name": "Verify gain offset feature on device", "status": "in_progress", "progress": "App installed on device, awaiting 11-step human verification"}
+  ],
+  "remaining_tasks": [
+    {"id": 6, "plan": "04-02", "name": "Verify gain offset feature on device (human-verify checkpoint)", "status": "awaiting_human"}
+  ],
+  "blockers": [
+    {"description": "On-device human verification of gain offset feature (11 steps)", "type": "human_action", "workaround": "none — requires physical BT device testing"}
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Test gain offset feature on device with 11-step checklist",
+      "context": "Plan 04-02 Task 3 is a human-verify checkpoint. All code is committed and app is installed. User must connect BT headphones and verify slider UX, persistence, auto-apply, reconnect, and notification display.",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "Added JUnit 4 dependency to gradle", "rationale": "Was missing from build config, blocking test execution", "phase": "04"},
+    {"decision": "Used .value snapshot for _gainOffsetOverrides in combine", "rationale": "Avoids changing combine arity — simpler and sufficient for transient UI state per research", "phase": "04"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd:resume-work → complete 11-step on-device verification → type 'approved' or describe issues → SUMMARY.md created → phase verification",
+  "context_notes": "Phase execution was Wave 1 (04-01 data+service, autonomous, complete) then Wave 2 (04-02 UI, has checkpoint). Stopped at the human-verify checkpoint. All code compiles, all unit tests pass. The orchestrator needs to spawn a continuation agent for 04-02 after user provides verification result."
+}
