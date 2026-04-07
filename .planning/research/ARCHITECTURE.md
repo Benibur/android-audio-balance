@@ -1,423 +1,487 @@
 # Architecture Research
 
-**Domain:** Android background service app — Bluetooth audio balance controller
-**Researched:** 2026-04-01
-**Confidence:** MEDIUM-HIGH (component boundaries HIGH, AudioEffect session approach MEDIUM due to deprecation ambiguity)
+**Domain:** Android Bluetooth audio processing — v1.1 gain offset + FAQ additions
+**Researched:** 2026-04-07
+**Confidence:** HIGH (direct codebase analysis of all 21 source files)
 
-## Standard Architecture
+> This file replaces the v1.0 research (2026-04-01). The architecture is now shipped and
+> validated. This document focuses exclusively on what changes for milestone v1.1.
 
-### System Overview
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          UI Layer (Main Process)                     │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  MainActivity  →  Jetpack Compose UI                         │   │
-│  │  - DeviceListScreen (device rows + balance sliders)          │   │
-│  │  - SettingsScreen (global toggle, export/import)             │   │
-│  └──────────────────┬───────────────────────────────────────────┘   │
-│                     │ observes StateFlow                             │
-│  ┌──────────────────▼───────────────────────────────────────────┐   │
-│  │  MainViewModel                                               │   │
-│  │  - uiState: StateFlow<UiState>                               │   │
-│  │  - handles user intent (slider moved, toggle, export)        │   │
-│  │  - delegates persistence to DeviceSettingsRepository         │   │
-│  │  - binds to AudioControlService to get live status           │   │
-│  └──────────┬────────────────────────┬──────────────────────────┘   │
-└─────────────┼────────────────────────┼──────────────────────────────┘
-              │ Repository calls        │ ServiceConnection (bind)
-┌─────────────▼────────────────────────▼──────────────────────────────┐
-│                      Domain / Service Layer                          │
-├──────────────────────────────────┬──────────────────────────────────┤
-│  DeviceSettingsRepository        │  AudioControlService             │
-│  - read/write per-MAC settings   │  (Foreground Service)            │
-│  - exposes Flow<List<Device>>    │                                  │
-│  - backed by DataStore           │  ┌────────────────────────────┐  │
-│                                  │  │  BTConnectionReceiver      │  │
-│  ┌───────────────────────────┐   │  │  (manifest-registered)     │  │
-│  │  DataStore (Preferences)  │   │  │  ACTION_CONNECTION_STATE   │  │
-│  │  Key: "balance_<MAC>"     │   │  │  → notifies service        │  │
-│  │  Key: "enabled_<MAC>"     │   │  └────────────┬───────────────┘  │
-│  └───────────────────────────┘   │               │                  │
-│                                  │  ┌────────────▼───────────────┐  │
-│                                  │  │  AudioEffectManager        │  │
-│                                  │  │  - holds AudioEffect refs  │  │
-│                                  │  │  - apply/release effects   │  │
-│                                  │  │  - session 0 primary path  │  │
-│                                  │  │  - session scan fallback   │  │
-│                                  │  └────────────────────────────┘  │
-└──────────────────────────────────┴──────────────────────────────────┘
-              │
-┌─────────────▼────────────────────────────────────────────────────────┐
-│                       Android OS / Boot Layer                         │
-├──────────────────────────────────────────────────────────────────────┤
-│  BootReceiver                                                         │
-│  ACTION_BOOT_COMPLETED → startForegroundService(AudioControlService)  │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Communicates With |
-|-----------|----------------|-------------------|
-| `MainActivity` | Compose host, permission requests | `MainViewModel` |
-| `MainViewModel` | UI state aggregation, user intent handling | `DeviceSettingsRepository`, `AudioControlService` (via binder) |
-| `DeviceSettingsRepository` | Read/write per-device balance settings, expose Flow | DataStore, `MainViewModel`, `AudioControlService` |
-| `AudioControlService` | Foreground service: monitors BT state, applies audio effects | `BTConnectionReceiver`, `AudioEffectManager`, `DeviceSettingsRepository` |
-| `BTConnectionReceiver` | Receives `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED` | `AudioControlService` (via intent or direct call) |
-| `AudioEffectManager` | Creates/destroys AudioEffect instances, applies balance | Android AudioEffect API, `AudioControlService` |
-| `BootReceiver` | Receives `ACTION_BOOT_COMPLETED`, starts foreground service | `AudioControlService` |
-
-## Recommended Project Structure
+## Existing Architecture (v1.0 — Immutable Baseline)
 
 ```
-app/src/main/
-├── java/com/example/btbalance/
-│   ├── MainActivity.kt               # Single activity, Compose host
-│   │
-│   ├── ui/
-│   │   ├── MainViewModel.kt          # UI state + user intent handler
-│   │   ├── UiState.kt                # Data classes for UI state
-│   │   ├── DeviceListScreen.kt       # Compose screen: device list + sliders
-│   │   └── SettingsScreen.kt         # Compose screen: global toggle, export
-│   │
-│   ├── service/
-│   │   ├── AudioControlService.kt    # Foreground service, orchestrator
-│   │   ├── AudioEffectManager.kt     # AudioEffect lifecycle management
-│   │   └── ServiceBinder.kt          # Binder for UI→service communication
-│   │
-│   ├── receiver/
-│   │   ├── BTConnectionReceiver.kt   # BluetoothA2dp state change handler
-│   │   └── BootReceiver.kt           # BOOT_COMPLETED → start service
-│   │
-│   ├── data/
-│   │   ├── DeviceSettingsRepository.kt  # Single source of truth for settings
-│   │   ├── DeviceSettings.kt            # Data class: MAC, balance, enabled
-│   │   └── DataStoreManager.kt          # DataStore read/write helpers
-│   │
-│   └── model/
-│       └── BluetoothDevice.kt        # Domain model for a known BT device
-│
-└── res/
-    ├── values/strings.xml
-    └── xml/
-        └── data_extraction_rules.xml # DataStore backup rules
+┌─────────────────────────────────────────────────────────────┐
+│                     UI Layer (Compose)                       │
+├──────────────┬──────────────────┬───────────────────────────┤
+│ Permissions  │  DeviceList      │  [NEW] FaqScreen           │
+│ Screen       │  Screen          │                            │
+│              │  + DeviceCard    │                            │
+└──────┬───────┴────────┬─────────┴──────────────┬────────────┘
+       │                │                         │
+┌──────▼────────────────▼─────────────────────────▼──────────┐
+│                   ViewModel Layer                            │
+│  DeviceListViewModel (AndroidViewModel)                      │
+│  — combines: AudioBalanceService.stateFlow                   │
+│            + repository.getAllDevicesFlow()                  │
+│            + _sliderOverrides (local MutableStateFlow)       │
+└────────────────────────┬────────────────────────────────────┘
+                         │  Intent ("seed_balance" /
+                         │          "reset_audio_only" /
+                         │          [NEW] "seed_gain_offset")
+┌────────────────────────▼────────────────────────────────────┐
+│           AudioBalanceService (ForegroundService)            │
+│  — holds DynamicsProcessing instance (session 0 global)      │
+│  — handles BT connect/disconnect via BtA2dpReceiver          │
+│  — applies gain per-channel to DP                            │
+│  — exposes companion object StateFlow for UI                 │
+└───────────┬─────────────────────────────┬───────────────────┘
+            │                             │
+┌───────────▼──────────┐      ┌───────────▼──────────────────┐
+│ DynamicsProcessing   │      │    BalanceRepository          │
+│ (session 0 global)   │      │    (DataStore Preferences)    │
+│ setInputGainby-      │      │    balance_XX_XX_XX           │
+│   Channel(ch, dB)    │      │    auto_apply_XX_XX_XX        │
+│                      │      │    name_XX_XX_XX              │
+│  Called with         │      │  [NEW] gain_offset_XX_XX_XX   │
+│  COMPOSED value:     │      └──────────────────────────────┘
+│  balance_dB +        │
+│  gainOffset_dB       │
+└──────────────────────┘
 ```
 
-### Structure Rationale
+---
 
-- **`service/`**: Groups all background work. `AudioControlService` owns effect lifecycle; `AudioEffectManager` is extracted so it can be unit-tested without a live service context.
-- **`receiver/`**: Manifest-registered receivers are isolated. Both are thin wrappers — they delegate to the service immediately and return.
-- **`data/`**: Repository pattern isolates DataStore details from the rest of the app. ViewModels and the Service both access settings through `DeviceSettingsRepository`, never DataStore directly.
-- **`ui/`**: Each Compose screen gets its own file. All state comes from `MainViewModel` via `collectAsStateWithLifecycle()`.
+## Integration Points for New Features
 
-## Architectural Patterns
+### 1. Gain Offset — DynamicsProcessing Composition
 
-### Pattern 1: Foreground Service as Audio Effect Orchestrator
+**The core question:** `setInputGainbyChannel(channel, gainDb)` overwrites the value for that
+channel. It does not accumulate. Balance and gain offset must be composed into a single dB value
+before each API call.
 
-**What:** `AudioControlService` owns the `AudioEffectManager` and is the sole component that creates or destroys `AudioEffect` instances. The service lifecycle dictates effect lifecycle — effects are created on BT connect and released on BT disconnect or service stop.
+**Composition rule (HIGH confidence — dB arithmetic):**
 
-**When to use:** Always. Audio effects tied to a service that outlives the UI ensure effects keep applying when the screen is off.
+Balance produces a per-channel attenuation via `BalanceMapper.toGainDb(balance)`:
+- `leftDb`  = 0 dB to -60 dB (attenuated when balance shifts right)
+- `rightDb` = 0 dB to -60 dB (attenuated when balance shifts left)
 
-**Trade-offs:** Service must call `startForeground()` within 5 seconds of `onStartCommand()`. Effects are only valid while the service is alive; if the OS kills the service, effects disappear.
+Gain offset is a symmetric dB shift applied to both channels:
+- `gainOffsetDb` = e.g. -12 dB to +6 dB
 
-**Example:**
+The composed values:
+
 ```kotlin
-class AudioControlService : Service() {
-    private val binder = ServiceBinder(this)
-    private lateinit var effectManager: AudioEffectManager
+val (balanceLeft, balanceRight) = BalanceMapper.toGainDb(balance.roundToInt())
+val leftFinal  = balanceLeft  + gainOffsetDb
+val rightFinal = balanceRight + gainOffsetDb
 
-    override fun onCreate() {
-        super.onCreate()
-        effectManager = AudioEffectManager()
-        startForeground(NOTIF_ID, buildNotification())
+dp?.setInputGainbyChannel(0, leftFinal)
+dp?.setInputGainbyChannel(1, rightFinal)
+```
+
+This is the only correct approach. Both controls are in dB space; dB addition is linear
+multiplication of linear gain, which is what the user expects (offset shifts overall volume,
+balance shifts relative difference).
+
+**DynamicsProcessing input gain range:** -80 dB to +80 dB per Android API docs. The current
+balance uses up to -60 dB. A gain offset range of -12 to +6 dB leaves safe headroom. Exposing
+extremes is not needed.
+
+**Where `setInputGainbyChannel` is currently called — all sites must be updated:**
+
+| Location | When called |
+|----------|-------------|
+| `AudioBalanceService.onStartCommand` — `seed_balance` block | Real-time slider update |
+| `AudioBalanceService.applyDeviceBalance()` | BT connect auto-apply |
+
+Both sites must be refactored to call a single `applyGains(balance: Float, gainOffset: Float)`
+private function that performs the composition and calls the API.
+
+---
+
+### 2. Gain Offset — Data Persistence
+
+**What to add to `BalanceRepository`:**
+
+```kotlin
+private fun gainOffsetKey(mac: String) =
+    floatPreferencesKey("gain_offset_${mac.replace(":", "_")}")
+
+suspend fun getGainOffset(mac: String): Float =
+    context.dataStore.data.map { it[gainOffsetKey(mac)] ?: 0f }.first()
+
+suspend fun saveGainOffset(mac: String, dB: Float) =
+    context.dataStore.edit { it[gainOffsetKey(mac)] = dB }
+```
+
+**`getAllDevicesFlow()` must emit gain offset per device.**
+
+Currently returns `Flow<List<Triple<String, Float, Boolean>>>`. The `Triple` approach does not
+scale to a fourth field. Replace it with a proper data class:
+
+```kotlin
+data class DeviceEntry(
+    val mac: String,
+    val balance: Float,       // -100f to +100f
+    val autoApply: Boolean,
+    val gainOffset: Float     // dB, default 0f
+)
+```
+
+Updated flow query inside `getAllDevicesFlow()` adds one line:
+
+```kotlin
+val gainOffset = prefs[gainOffsetKey(mac)] ?: 0f
+DeviceEntry(mac, balance, autoApply, gainOffset)
+```
+
+**Files modified by this change:**
+- `BalanceRepository` — add `DeviceEntry`, update `getAllDevicesFlow()`
+- `DeviceListViewModel` — the combine lambda destructures `DeviceEntry` instead of `Triple`
+- `DeviceUiState` — add `gainOffset: Float = 0f`
+
+---
+
+### 3. Gain Offset — Service Intent
+
+New intent action mirrors the existing `seed_balance` pattern:
+
+```kotlin
+// ViewModel sends:
+Intent(context, AudioBalanceService::class.java).apply {
+    putExtra("action", "seed_gain_offset")
+    putExtra("gain_offset", gainOffsetDb)
+}
+
+// Service handles in onStartCommand:
+"seed_gain_offset" -> {
+    val gainOffsetDb = intent.getFloatExtra("gain_offset", 0f)
+    val mac = currentDeviceMac ?: return
+    serviceScope.launch {
+        balanceRepository.saveGainOffset(mac, gainOffsetDb)
+        val balance = balanceRepository.getBalance(mac)
+        applyGains(balance, gainOffsetDb)   // shared helper
+        _stateFlow.value = _stateFlow.value.copy(currentGainOffset = gainOffsetDb)
     }
-
-    fun onDeviceConnected(macAddress: String) {
-        val balance = repository.getBalance(macAddress)
-        effectManager.applyBalance(balance)
-    }
-
-    fun onDeviceDisconnected() {
-        effectManager.release()
-    }
-
-    override fun onBind(intent: Intent) = binder
-    override fun onDestroy() { effectManager.release(); super.onDestroy() }
 }
 ```
 
-### Pattern 2: Manifest-Registered BroadcastReceiver Delegating to Service
+The service already holds `currentDeviceMac` so it can load the stored balance when only
+the gain offset changes, and vice versa.
 
-**What:** `BTConnectionReceiver` is declared in the manifest so it fires even when the app is not running. Because `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED` is on the implicit broadcast exemption list (API 26+), manifest registration is allowed and works from background.
+---
 
-**When to use:** For this project exclusively — it is one of the few remaining implicit broadcasts that can be manifest-registered.
+### 4. Gain Offset — ViewModel
 
-**Trade-offs:** `onReceive()` runs on the main thread with a 10-second hard limit. No coroutines, no suspend functions. The receiver must start the foreground service and return immediately; all real work happens in the service.
+**New fields and callbacks, parallel to balance:**
 
-**Example:**
 ```kotlin
-class BTConnectionReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED) return
-        val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
-        val device = if (Build.VERSION.SDK_INT >= 33)
-            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-        else
-            @Suppress("DEPRECATION") intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+private val _gainOffsetOverrides = MutableStateFlow<Map<String, Float>>(emptyMap())
 
-        val serviceIntent = Intent(context, AudioControlService::class.java).apply {
-            putExtra(EXTRA_BT_STATE, state)
-            putExtra(EXTRA_MAC, device?.address)
+// In combine lambda — DeviceEntry now has gainOffset:
+val displayGainOffset = gainOffsetOverrides[mac] ?: deviceEntry.gainOffset
+DeviceUiState(..., gainOffset = displayGainOffset)
+
+fun onGainOffsetChange(mac: String, dB: Float) {
+    _gainOffsetOverrides.value = _gainOffsetOverrides.value + (mac to dB)
+    if (isConnectedDevice(mac)) {
+        val now = System.currentTimeMillis()
+        if (now - lastSendTimestamp >= 50) {   // same 50ms throttle
+            lastSendTimestamp = now
+            sendGainOffsetToService(dB)
         }
-        context.startForegroundService(serviceIntent)
+    }
+}
+
+fun onGainOffsetFinished(mac: String, rawDb: Float) {
+    val snappedDb = if (kotlin.math.abs(rawDb) <= 0.5f) 0f else rawDb  // snap to 0
+    _gainOffsetOverrides.value = _gainOffsetOverrides.value - mac
+    viewModelScope.launch {
+        repository.saveGainOffset(mac, snappedDb)
+        if (isConnectedDevice(mac)) sendGainOffsetToService(snappedDb)
     }
 }
 ```
 
-### Pattern 3: Repository as Single Source of Truth, Consumed by Both Service and ViewModel
+---
 
-**What:** `DeviceSettingsRepository` wraps DataStore (Preferences) and exposes a `Flow<List<DeviceSettings>>`. Both `MainViewModel` (for UI) and `AudioControlService` (to know what balance to apply) read from it. Writes go through the repository only.
+### 5. Gain Offset — UI (DeviceCard)
 
-**When to use:** Any time two components need the same data. Avoids the service and UI getting out of sync.
+A second slider below the balance slider. Same structural pattern: L label + Slider + R label
+replaced by: a dB label (center-aligned showing current value) + Slider.
 
-**Trade-offs:** The service needs a `CoroutineScope` (use `lifecycleScope` or a manually managed scope) to call suspend functions and collect flows. SharedPreferences would be simpler but is not coroutine-native and has no Flow support.
+**Slider mapping:**
 
-### Pattern 4: Bound Service for UI ↔ Service Bidirectional Communication
+```kotlin
+// gainOffset: -12f to +6f dB
+// Slider API: 0f to 1f
+val sliderValue = (gainOffset - (-12f)) / (6f - (-12f))   // normalize to 0..1
 
-**What:** `MainViewModel` binds to `AudioControlService` using `ServiceConnection`. The `ServiceBinder` exposes the service instance directly (same process, no IPC needed). This allows the UI to query live service state (e.g. "which device is currently connected") and the service to post state updates back.
+// On change:
+val gainOffsetDb = sliderValue * 18f + (-12f)
+```
 
-**When to use:** When the UI needs real-time status from a running service. Preferred over `LocalBroadcastManager` (deprecated) or sticky intents.
+**Label:** "Volume: 0 dB" / "Volume: -3 dB" / "Volume: +2 dB"
 
-**Trade-offs:** `bindService()` is asynchronous — the binder is not available immediately. ViewModel must handle the null case. Unbind in `onCleared()`.
+**New parameters for `DeviceCard`:**
+
+```kotlin
+@Composable
+fun DeviceCard(
+    device: DeviceUiState,
+    onBalanceChange: (Float) -> Unit,
+    onBalanceFinished: (Float) -> Unit,
+    onAutoApplyToggle: (Boolean) -> Unit,
+    onGainOffsetChange: (Float) -> Unit,      // NEW
+    onGainOffsetFinished: (Float) -> Unit     // NEW
+)
+```
+
+---
+
+### 6. FAQ Screen — Navigation Pattern
+
+**Recommended pattern:** Add a third `composable()` route to the existing `NavHost` in
+`AppNavigation.kt`. No new nav graph, no nested navigation.
+
+**`AppNavigation.kt` changes:**
+
+```kotlin
+// Add route
+composable("faq") {
+    FaqScreen(onBack = { navController.popBackStack() })
+}
+
+// Thread onFaqClick into device_list route
+composable("device_list") {
+    DeviceListScreen(onFaqClick = { navController.navigate("faq") })
+}
+```
+
+**`DeviceListScreen` change:** Add `onFaqClick: () -> Unit` parameter. Pass it to the
+`TopAppBar` as an `IconButton` with `Icons.Outlined.Info` or `Icons.Outlined.HelpOutline`.
+
+**`FaqScreen` — stateless composable, no ViewModel:**
+
+```kotlin
+@Composable
+fun FaqScreen(onBack: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("À propos") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        // Static content: Column with Text blocks + ClickableText for GitHub URL
+        // uriHandler.openUri("https://github.com/Benibur/android-audio-balance")
+    }
+}
+```
+
+`LocalUriHandler.current.openUri()` is the Compose-idiomatic way to open a URL. No
+`Intent(Intent.ACTION_VIEW)` boilerplate needed.
+
+---
+
+## Component Change Summary
+
+| Component | Status | What Changes |
+|-----------|--------|-------------|
+| `BalanceRepository` | MODIFIED | Add `DeviceEntry` data class; add `gainOffsetKey`, `getGainOffset`, `saveGainOffset`; update `getAllDevicesFlow` to emit `DeviceEntry` |
+| `AudioBalanceService` | MODIFIED | Add `seed_gain_offset` intent handler; extract `applyGains(balance, offset)` private helper; update both `setInputGainbyChannel` call sites to use it |
+| `BalanceMapper` | MODIFIED | `toGainDb` still returns `Pair<Float, Float>` — no change to its signature. Composition with gain offset happens in the new `applyGains()` helper in the service |
+| `DeviceUiState` | MODIFIED | Add `gainOffset: Float = 0f` field |
+| `ServiceState` | MODIFIED | Add `currentGainOffset: Float = 0f` (needed if notification shows gain level) |
+| `DeviceListViewModel` | MODIFIED | Update combine lambda for `DeviceEntry`; add `_gainOffsetOverrides`; add `onGainOffsetChange` / `onGainOffsetFinished`; add `sendGainOffsetToService()` |
+| `DeviceCard` | MODIFIED | Add gain offset slider + label; add two new callback params |
+| `DeviceListScreen` | MODIFIED | Pass new callbacks to `DeviceCard`; accept and thread `onFaqClick` lambda; add info `IconButton` to `TopAppBar` |
+| `AppNavigation` | MODIFIED | Add `"faq"` composable route; pass `onFaqClick` lambda to device_list route |
+| `FaqScreen` | NEW | Stateless composable, `onBack` lambda, `LocalUriHandler` for GitHub link |
+
+---
 
 ## Data Flow
 
-### BT Connection → Effect Applied
+### Real-Time Gain Offset Slider
 
 ```
-Physical BT connect event (OS)
+User moves gain offset slider in DeviceCard
     ↓
-BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED (implicit broadcast)
+onGainOffsetChange(mac, dB)
     ↓
-BTConnectionReceiver.onReceive()          [main thread, <10s]
-    ↓ startForegroundService(intent with MAC + state)
-AudioControlService.onStartCommand()      [handles START_REDELIVER_INTENT]
-    ↓ read settings (suspend, coroutine scope)
-DeviceSettingsRepository.getSettings(mac)
-    ↓ balance value
-AudioEffectManager.applyBalance(balance)  [creates/updates AudioEffect]
+DeviceListViewModel._gainOffsetOverrides updated  → immediate UI recompose
+    ↓ (only if connected device, throttled 50 ms)
+Intent("seed_gain_offset", gain_offset=dB) → AudioBalanceService.onStartCommand
     ↓
-Android AudioFlinger (OS audio routing)
-```
-
-### User Changes Balance Slider
-
-```
-Compose Slider onValueChange
+save to repo, read current balance from repo
     ↓
-MainViewModel.onBalanceChanged(mac, value)
-    ↓ coroutine launch
-DeviceSettingsRepository.saveBalance(mac, value)  [DataStore write]
-    ↓ Flow emission
-AudioControlService (collecting Flow)
-    ↓ if device currently connected
-AudioEffectManager.applyBalance(value)    [live update]
+applyGains(balance, dB):
+    leftFinal  = balanceLeft  + dB
+    rightFinal = balanceRight + dB
     ↓
-StateFlow<UiState> updated
+dp?.setInputGainbyChannel(0, leftFinal)
+dp?.setInputGainbyChannel(1, rightFinal)
+```
+
+### BT Connect Auto-Apply (with gain offset)
+
+```
+BtA2dpReceiver → handleBtEvent(STATE_CONNECTED)
+    ↓ 1 s delay (audio routing stability)
+applyDeviceBalance(device)
     ↓
-Compose recompose (slider reflects saved value)
+repo.getBalance(mac)      → balance
+repo.getGainOffset(mac)   → gainOffsetDb  [NEW]
+repo.getAutoApply(mac)    → autoApply
+    ↓ if autoApply
+applyGains(balance, gainOffsetDb)          [NEW shared helper]
+    dp?.setInputGainbyChannel(0, balanceLeft  + gainOffsetDb)
+    dp?.setInputGainbyChannel(1, balanceRight + gainOffsetDb)
 ```
 
-### Boot Sequence
+### FAQ Navigation
 
 ```
-Device reboots
+DeviceListScreen: user taps info icon in TopAppBar
     ↓
-ACTION_BOOT_COMPLETED (exempt from background restrictions)
+onFaqClick() lambda (provided by AppNavigation)
     ↓
-BootReceiver.onReceive()
-    ↓ startForegroundService(AudioControlService)
-AudioControlService.onCreate()
-    ↓ startForeground() (must occur within 5s)
-Persistent notification shown
-    ↓ query current BT state via BluetoothManager
-If A2DP device already connected: applyBalance()
-Service waits for future BT events via BTConnectionReceiver
-```
-
-### State Management
-
-```
-DataStore (persistent on-disk)
-    ↓ Flow<Preferences>
-DeviceSettingsRepository
-    ↓ Flow<List<DeviceSettings>>
-    ├── MainViewModel._uiState (StateFlow)  →  Compose UI
-    └── AudioControlService (collect)       →  AudioEffectManager
-```
-
-## AudioEffect: Session Approach Decision Tree
-
-This is the critical technical decision. The architecture must accommodate two approaches:
-
-```
-Service starts, BT device connected
+navController.navigate("faq")
     ↓
-TRY: AudioEffect(Equalizer.EFFECT_TYPE_EQUALIZER, ..., sessionId = 0)
-    ↓ success?
-    ├── YES → apply balance via left/right gain on EQ bands
-    │         flag: SESSION_0_APPROACH_ACTIVE
-    └── NO  → FALLBACK: Listen for ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION
-                        broadcast from cooperating media players
-              OR use AudioManager.getActivePlaybackConfigurations()
-                        to enumerate live session IDs
-              Apply effect per-session
-              flag: PER_SESSION_APPROACH_ACTIVE
+FaqScreen rendered (stateless, static content)
+    ↓ user taps back arrow
+onBack() → navController.popBackStack()
+    ↓
+DeviceListScreen restored (back stack state preserved)
 ```
 
-**Session 0 status (MEDIUM confidence):** Deprecated since ~Android 2.3 but never removed. Works on many devices / OEM skins as of 2024. Will not work on all devices. Must be wrapped in try/catch and tested on physical hardware.
+---
 
-**Per-session fallback:** `AudioManager.getActivePlaybackConfigurations()` returns `List<AudioPlaybackConfiguration>`, each with an audio session ID. Create an `AudioEffect` per session. This is more reliable but requires querying on each BT connect, and newly started players after connect won't be caught without polling or the `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION` broadcast.
+## Recommended Build Order
 
-**Architecture implication:** `AudioEffectManager` must be written to support both approaches behind a single interface. The Phase 1 POC should determine which path works; Phase 2 builds the full manager around the validated approach.
+Build in dependency order — lower layers first:
 
-## Foreground Service Type Declaration
+**Step 1 — Data layer**
+`DeviceEntry` data class + `BalanceRepository` additions for gain offset +
+update `getAllDevicesFlow()` to emit `DeviceEntry`.
+No UI, no service changes. Isolated, testable.
 
-For Android 14+ (API 34+), foreground service type must be declared. For this app:
+**Step 2 — Service layer**
+Extract `applyGains(balance, offset)` helper in `AudioBalanceService`.
+Update both existing `setInputGainbyChannel` call sites to use it.
+Add `seed_gain_offset` intent handler.
+Update `applyDeviceBalance()` to load and pass gain offset.
+All audio logic in one pass — no half-measures.
 
-```xml
-<service
-    android:name=".service.AudioControlService"
-    android:foregroundServiceType="connectedDevice"
-    android:exported="false">
-</service>
-```
+**Step 3 — ViewModel + state layer**
+`DeviceUiState` and `ServiceState` field additions.
+`DeviceListViewModel` combine lambda update + `_gainOffsetOverrides` + new callbacks.
+Depends on Step 1 (repository API) and Step 2 (intent action constant).
 
-`connectedDevice` is the correct type: the service's purpose is managing interactions with an external Bluetooth device. It requires `BLUETOOTH_CONNECT` runtime permission (already needed). It does NOT require `mediaPlayback` because this app is not a media player.
+**Step 4 — UI layer**
+`DeviceCard` second slider.
+`DeviceListScreen` new callbacks + FAQ icon.
+`AppNavigation` new route.
+`FaqScreen` static composable.
+Depends on Step 3 (ViewModel + UiState).
 
-## Permissions Architecture
+**Step 5 — GitHub repo**
+README, MIT licence, public repository.
+Purely documentation. No code dependencies. Logically last (documents the completed feature set).
 
-| Permission | Why | When Required |
-|------------|-----|---------------|
-| `BLUETOOTH_CONNECT` | Query connected devices, receive A2DP state events | API 31+ (runtime) |
-| `BLUETOOTH_SCAN` | Not strictly needed here; omit unless discovery required | — |
-| `MODIFY_AUDIO_SETTINGS` | Required for `AudioEffect` on session 0 | All APIs |
-| `FOREGROUND_SERVICE` | Start a foreground service | All APIs |
-| `FOREGROUND_SERVICE_CONNECTED_DEVICE` | Declare `connectedDevice` FGS type | API 34+ |
-| `RECEIVE_BOOT_COMPLETED` | Register for `ACTION_BOOT_COMPLETED` | All APIs |
+---
 
-## Anti-Patterns
+## Architectural Invariants (Must Not Be Broken)
 
-### Anti-Pattern 1: Creating AudioEffect in BroadcastReceiver
+These constraints made v1.0 work. Every change must respect them.
 
-**What people do:** Instantiate `AudioEffect` directly inside `BTConnectionReceiver.onReceive()`.
+| Invariant | Why it must hold |
+|-----------|-----------------|
+| All `setInputGainbyChannel` calls go through one function | Balance and gain offset must be composed together; split call sites create split-brain audio state |
+| DP auto-recovery (`hasControl()` check before apply) | Another app can evict our DP at any time; `applyGains()` must include the same null/hasControl check as current `seed_balance` handler |
+| `currentDeviceMac` null check before repo writes | Prevents orphaned DataStore entries |
+| 50 ms throttle on real-time slider events to service | Gain offset slider must throttle same as balance slider |
+| 1 s delay after BT connect before applying audio | Audio routing not stable at connect time; gain offset is included in this delayed apply via `applyDeviceBalance()` |
+| DP `setEnabled(true)` after create, check `hasControl()` | The `createDpInstance()` pattern is not touched by these changes |
 
-**Why it's wrong:** `onReceive()` returns and the receiver is destroyed. The `AudioEffect` is released. The effect is never actually applied for more than a few milliseconds. Additionally, effect creation may be slow and trigger ANR.
+---
 
-**Do this instead:** Start the foreground service from `onReceive()`; create the `AudioEffect` in the service.
+## Anti-Patterns to Avoid
 
-### Anti-Pattern 2: Polling for BT Connection State
+### Anti-Pattern 1: Two separate `setInputGainbyChannel` calls for balance + gain offset
 
-**What people do:** Use a `Timer` or `Handler.postDelayed()` to periodically call `BluetoothA2dp.getConnectedDevices()`.
+**What:** Call the API once for balance, then call it again for gain offset.
 
-**Why it's wrong:** Wastes battery. Introduces latency (up to poll interval). Entirely unnecessary because `ACTION_CONNECTION_STATE_CHANGED` fires immediately on connect/disconnect.
+**Why wrong:** The second call overwrites the first. The channel ends up with only the gain offset
+applied, balance is lost.
 
-**Do this instead:** React to the broadcast. Optionally query current state once at service start (to handle "already connected at boot" case).
+**Instead:** One `applyGains(balance, gainOffset)` function composes both to dB before a single
+API call per channel.
 
-### Anti-Pattern 3: Storing Settings in SharedPreferences with String Concatenation Keys
+### Anti-Pattern 2: Reading gain offset inside `seed_balance` handler, balance inside `seed_gain_offset` handler — separately
 
-**What people do:** `prefs.putFloat("balance_" + mac, value)` using SharedPreferences directly in the ViewModel.
+**What:** Each intent handler reads only its own value from the repo and applies both values
+by also calling `getBalance()` or `getGainOffset()` ad-hoc inside each handler.
 
-**Why it's wrong:** SharedPreferences writes are synchronous on the caller thread (blocking UI), or if using `apply()` the write isn't guaranteed before a crash. No Flow support means the service can't react to changes.
+**Why wrong:** Three code paths reading and applying gain values. Easy to miss updating one;
+leads to inconsistent state.
 
-**Do this instead:** Use `DataStore<Preferences>` with a typed key (`floatPreferencesKey("balance_$mac")`). DataStore is coroutine-safe, crash-safe, and emits a `Flow` on change.
+**Instead:** Both handlers call `applyGains(mac)` — a shared suspend function that reads both
+values from repo and calls the API once. Single implementation.
 
-### Anti-Pattern 4: Accessing Service State via Static Variables or Singletons
+### Anti-Pattern 3: Passing NavController directly into FaqScreen
 
-**What people do:** Hold `AudioEffectManager` in a companion object or Application class so ViewModel can reach it directly.
+**What:** `FaqScreen(navController = navController)` so it calls `navController.popBackStack()`.
 
-**Why it's wrong:** Service may be killed and restarted; the static reference becomes stale or points to a dead effect. Testing becomes impossible.
+**Why wrong:** Couples a screen composable to the navigation framework. Breaks @Preview, harder
+to reuse or test.
 
-**Do this instead:** Use the bound service pattern. `MainViewModel` binds to `AudioControlService` and calls methods on the live service instance via `ServiceBinder`.
+**Instead:** Pass `onBack: () -> Unit`. `AppNavigation` provides `{ navController.popBackStack() }`.
 
-### Anti-Pattern 5: Launching Media Playback FGS Type from BOOT_COMPLETED on API 34+
+### Anti-Pattern 4: Adding a ViewModel to FaqScreen
 
-**What people do:** Declare `foregroundServiceType="mediaPlayback"` (seems logical for audio), then try to start it from `BootReceiver`.
+**What:** `FaqViewModel` created by habit.
 
-**Why it's wrong:** Android 14 explicitly forbids starting `mediaPlayback` FGS from a `BOOT_COMPLETED` receiver. This throws `ForegroundServiceStartNotAllowedException`.
+**Why wrong:** FAQ content is static string resources. No async loading, no business logic, no
+state. ViewModel adds file count and complexity with zero benefit.
 
-**Do this instead:** Use `connectedDevice` type, which is not restricted. `BOOT_COMPLETED` → foreground service start is allowed for `connectedDevice`.
+**Instead:** Pure stateless `@Composable` with `stringResource()` calls.
 
-## Integration Points
+### Anti-Pattern 5: Adding a new DataStore file for gain offset
 
-### External Services
+**What:** Create `val Context.gainOffsetDataStore by preferencesDataStore(name = "gain_offset")`.
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Android Bluetooth stack | Broadcast receiver for state changes | `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED` is exempt from implicit broadcast restrictions |
-| Android AudioFlinger | `AudioEffect` constructor with session ID | Session 0 deprecated but often functional; must verify on physical device |
-| Android OS boot | `ACTION_BOOT_COMPLETED` broadcast | Exempt from background restrictions; works with `connectedDevice` FGS type |
-| DataStore (Jetpack) | Repository wrapping `dataStore` extension | Coroutine-native; no SharedPreferences needed |
+**Why wrong:** Two DataStore files = two async reads per device per BT connect. Unnecessary.
 
-### Internal Boundaries
+**Instead:** Add `gain_offset_XX_XX_XX` keys to the existing `device_balance` DataStore. All
+device settings in one store, one read path.
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| `BTConnectionReceiver` → `AudioControlService` | `startForegroundService(Intent)` with extras | Receiver must not do work; relay MAC + state in intent extras |
-| `BootReceiver` → `AudioControlService` | `startForegroundService(Intent)` | Simple start, service queries BT state itself on create |
-| `MainViewModel` → `AudioControlService` | Bound service (`ServiceBinder.getService()`) | Bind in `init`, unbind in `onCleared()` |
-| `MainViewModel` → `DeviceSettingsRepository` | Direct calls + `Flow` collection | Repository injected via constructor (or Hilt) |
-| `AudioControlService` → `DeviceSettingsRepository` | Direct calls + `Flow` collection | Service maintains its own `CoroutineScope` (cancel in `onDestroy()`) |
-| `AudioControlService` → `MainViewModel` | Via `StateFlow` in repository (shared reactive stream) | Service writes state; ViewModel observes the same Flow |
-
-## Suggested Build Order
-
-Dependencies flow bottom-up. Build in this order to avoid mocking incomplete layers:
-
-1. **DataStore + Repository** (`data/`)
-   — No Android service dependencies. Can be unit-tested with in-memory DataStore.
-
-2. **`AudioEffectManager`** (POC phase)
-   — Isolated class. Validates whether session 0 approach works. No UI, no service needed.
-   — This is the highest-risk component. Must be validated before building anything else.
-
-3. **`AudioControlService`** (`service/`)
-   — Depends on Repository (step 1) and AudioEffectManager (step 2).
-   — Build with hardcoded settings first; integrate repository second.
-
-4. **`BTConnectionReceiver` + `BootReceiver`** (`receiver/`)
-   — Thin. Depends only on Service being available to start.
-
-5. **`MainViewModel`** (`ui/`)
-   — Depends on Repository (step 1) and Service (step 3, via binder).
-
-6. **Compose UI** (`ui/` screens)
-   — Depends only on ViewModel state. Last layer; no logic here.
-
-## Scaling Considerations
-
-This is a single-user personal app. Scaling is not relevant. However:
-
-| Concern | Approach |
-|---------|----------|
-| Multiple BT devices simultaneously | `AudioEffectManager` holds a `Map<String, AudioEffect>` keyed by MAC; apply highest-priority (most recently connected) or merge |
-| Large number of known devices in DataStore | DataStore handles this fine up to hundreds of entries; no concern |
-| Memory leak from AudioEffect | Must call `release()` explicitly; manager tracks all live instances and releases in `onDestroy()` |
+---
 
 ## Sources
 
-- [BluetoothA2dp API reference — Android Developers](https://developer.android.com/reference/android/bluetooth/BluetoothA2dp)
-- [Implicit broadcast exceptions (includes BT + BOOT_COMPLETED) — Android Developers](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions)
-- [Foreground service types — Android Developers](https://developer.android.com/develop/background-work/services/fgs/service-types)
-- [Restrictions on starting FGS from background — Android Developers](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)
-- [Why Android equalizer apps don't work with all media players — Esper](https://www.esper.io/blog/android-equalizer-apps-inconsistent)
-- [AudioEffect session 0 deprecation issue — Google Issue Tracker #36936557](https://issuetracker.google.com/issues/36936557)
-- [StateFlow and SharedFlow — Android Developers](https://developer.android.com/kotlin/flow/stateflow-and-sharedflow)
-- [Services overview — Android Developers](https://developer.android.com/develop/background-work/services)
-- [Foreground service types required (API 34) — Android Developers](https://developer.android.com/about/versions/14/changes/fgs-types-required)
+- Direct codebase analysis: `AudioBalanceService.kt`, `BalanceRepository.kt`,
+  `DeviceListViewModel.kt`, `BalanceMapper.kt`, `AppNavigation.kt`, `DeviceCard.kt`,
+  `DeviceUiState.kt`, `DevicePreferences.kt` (all read 2026-04-07)
+- `DynamicsProcessing.setInputGainbyChannel()` semantics: overwrites, does not accumulate
+  (HIGH confidence — standard audio effect API semantics; validated in v1.0 POC)
+- dB addition for independent gain stages: standard audio signal processing
+  (HIGH confidence)
+- Jetpack Navigation Compose `composable()` + `popBackStack()` pattern: standard API
+  (HIGH confidence)
+- `LocalUriHandler` for Compose URL opening: Compose UI standard library
+  (HIGH confidence)
 
 ---
-*Architecture research for: Android Bluetooth Audio Balance Controller*
-*Researched: 2026-04-01*
+
+*Architecture research for: Android BT Audio Balance v1.1 — Gain Offset + FAQ*
+*Researched: 2026-04-07*

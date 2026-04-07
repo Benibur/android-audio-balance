@@ -1,185 +1,160 @@
 # Project Research Summary
 
-**Project:** Android Bluetooth Audio Balance Controller
-**Domain:** Android background service app — per-device stereo balance correction via AudioEffect
-**Researched:** 2026-04-01
-**Confidence:** MEDIUM (core Android APIs verified; AudioEffect session 0 feasibility is the critical unknown)
+**Project:** Android Audio Balance Controller — v1.1 milestone
+**Domain:** Android Bluetooth audio processing (DynamicsProcessing, Jetpack Compose)
+**Researched:** 2026-04-07
+**Confidence:** HIGH
+
+> NOTE: This supersedes the v1.0 summary (2026-04-01). v1.0 is shipped and validated.
+> This summary covers only the three new v1.1 features: per-device gain offset, FAQ screen, GitHub open source.
 
 ## Executive Summary
 
-This is a single-purpose Android utility that monitors Bluetooth A2DP connections and automatically applies per-device stereo balance corrections using Android's `AudioEffect` API. The architecture is well-understood: a `connectedDevice` foreground service listens for A2DP connection events, looks up a per-device balance coefficient from DataStore, and applies it via `AudioEffect`. The Kotlin/Compose/Hilt stack is modern, version constraints are tight (AGP 9.1.0 + Kotlin 2.3.10 + KSP), and all framework APIs are well-documented.
+This is an incremental v1.1 milestone on top of a fully shipped and validated v1.0 Android app. The existing stack (Kotlin 2.0.21, Compose BOM 2024.12.01, navigation-compose 2.8.5, DataStore, a ForegroundService driving DynamicsProcessing on session 0) requires zero new dependencies for any of the three new features. Two library version upgrades are recommended (Compose BOM to 2026.03.00, navigation-compose to 2.9.7) but neither is blocking. All v1.1 work is additive: extend existing patterns, do not replace them.
 
-The project's single highest-risk unknown is whether `AudioEffect` with session 0 (global output mix) reliably applies stereo balance on the target hardware. This API is deprecated since Android 2.3 but never removed, and it works on many devices — including Pixel — but is silently blocked on a significant fraction of OEM devices (Samsung One UI, Xiaomi MIUI/HyperOS). The entire AudioEffect portion of the implementation must be validated on physical target hardware before the rest of the feature set is built. A three-tier fallback strategy exists: session 0 → per-session-ID broadcasts → AudioRecord/AudioTrack re-injection.
+The three new features break cleanly by implementation complexity. Gain offset is the most technically demanding because it must be composed with the existing balance values in a single DynamicsProcessing API call — separate calls silently overwrite each other, breaking balance entirely. The FAQ screen is a stateless Compose leaf screen with no ViewModel, no new dependencies, and a single new navigation route. GitHub repo setup is pure documentation work with no code changes, but carries a non-obvious security risk: the git history must be audited for secrets before the first public push.
 
-The recommended mitigation is to phase the build: a dedicated POC phase first to validate the audio effect approach, followed by standard service/persistence/UI phases that build on the confirmed implementation. OEM battery optimisation killing the foreground service is a secondary risk that requires user-facing onboarding (not code fixes) for Xiaomi and older Samsung devices.
+The recommended build order mirrors the data-dependency chain: data layer first (BalanceRepository + DeviceEntry), then service layer (applyGains helper + seed_gain_offset intent), then ViewModel/state layer, then UI (DeviceCard second slider + FaqScreen + AppNavigation route), and finally the GitHub repo (documents the completed feature set). The critical invariant throughout is that all setInputGainbyChannel calls go through one function — this is the single biggest pitfall in this milestone and cannot be worked around later without a full refactor.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is Kotlin 2.3.10 with AGP 9.1.0, Jetpack Compose (BOM 2026.03.00), Hilt 2.57.1, Room 2.8.4, and DataStore Preferences 1.1.2. KSP replaces KAPT for annotation processing. The version constraints are tightly coupled: KSP version must exactly match Kotlin version in `{kotlin}-{ksp}` format, and AGP 9.1.0 requires Android Studio Otter 3 Feature Drop or later. The only deprecated dependency in the recommended stack is `AudioEffect` session 0, which is kept because it remains the only viable no-root path for system-wide balance.
+The v1.0 stack is unchanged and proven. No new libraries are needed. The only recommended changes are two version bumps in `gradle/libs.versions.toml`: Compose BOM from 2024.12.01 to 2026.03.00 and navigation-compose from 2.8.5 to 2.9.7. Both are low-risk stable upgrades with no API changes, and they align the project with Android 16 (Pixel 10 test device). Navigation 3 (1.0.0-alpha10) is explicitly not recommended — it is alpha, API-unstable, and adds zero value for a 3-screen app.
 
 **Core technologies:**
-- Kotlin 2.3.10 + Coroutines 1.10.2: primary language with coroutine-first async — required for modern AGP and Compose BOM
-- Jetpack Compose BOM 2026.03.00 + Material3: UI toolkit — manages all Compose library versions coherently
-- `android.media.audiofx.Equalizer` (session 0): balance simulation via EQ band gain — only viable no-root path for global effect
-- `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED`: A2DP state broadcast — exempt from background restrictions, manifest-registerable
-- Foreground service (`connectedDevice` type): background persistence — required type for API 34+ and BOOT_COMPLETED compatibility
-- Room 2.8.4 + DataStore 1.1.2: persistence — Room for per-device records, DataStore for global app settings
-- Hilt 2.57.1 + KSP: dependency injection — first-class Android scopes (Service, ViewModel, BroadcastReceiver)
-
-**Critical version constraints:**
-- KSP: `2.3.10-2.0.0` (must match Kotlin 2.3.10 exactly)
-- AGP 9.1.0 requires Gradle 9.3.1+ and Android Studio Otter 3 Feature Drop+
-- `accompanist-permissions` is deprecated and must NOT be used — use `activity-compose:1.10+` instead
+- `DynamicsProcessing` (API 28+): audio effects engine — already proven in v1.0; `setInputGainbyChannel` is the only apply path; no accumulation, absolute setter only
+- `DataStore Preferences`: per-device persistence — extend with `gain_offset_XX_XX_XX` key; same store, no migration, default 0f
+- `navigation-compose 2.9.7`: routing — add one `"faq"` composable route to existing NavHost; no navigation framework change
+- `Compose BOM 2026.03.00`: UI framework — all UI is Compose; FaqScreen is a stateless composable with zero new dependencies
+- `ForegroundService + BtA2dpReceiver`: lifecycle backbone — no lifecycle changes; only audio apply logic extended
 
 ### Expected Features
 
-**Must have (table stakes — v1):**
-- Per-device balance profile storage (MAC address → balance float) — everything else depends on this
-- Persistent balance slider UI per device — the only user-facing audio control
-- BT A2DP connect/disconnect detection — triggers auto-apply
-- AudioEffect session 0 balance application (or validated fallback) — the core effect
-- Foreground service with persistent notification — required for background survival
-- Auto-start on device boot — without this the app fails after every reboot
-- Device list screen with per-device enable/disable toggle — device management
-- Global enable/disable kill switch — surfaced in notification
+**Must have (table stakes):**
+- Gain offset slider in DeviceCard (−12 dB to +6 dB or −12 dB to 0 dB — see Gaps) with real-time feedback
+- Gain persisted per MAC address in DataStore — default 0f; same pattern as balance
+- Gain applied on BT device connect alongside balance — applying only one is a regression
+- Gain reset on disconnect — mirrors existing balance reset behavior
+- Balance + gain composed atomically in a single DP write per channel — correctness requirement, not optional
+- Center snap at 0 dB on gain slider release — same quality bar as balance slider
+- FAQ/About screen accessible via info icon in DeviceListScreen TopAppBar
+- GitHub public repo with README, MIT LICENSE, and current codebase
 
-**Should have (v1.x after validation):**
-- JSON export/import — survive reinstalls; neither Wavelet nor Precise Volume prominently offer this
-- "Apply now" notification action — one-tap re-apply for race-condition cases
-- Last-applied timestamp per device — debug aid
-- Named device nicknames — handle confusing BT default names
+**Should have (differentiators):**
+- Notification text includes gain when non-zero — user can verify effect state without opening app
+- FAQ explains session-0 conflict behavior — sets user expectations about competing audio apps
+- `DeviceEntry` data class replacing `Triple` in repository — enables clean fourth field addition
 
-**Defer (v2+):**
-- Quick Settings Tile — TileService lifecycle complexity; defer until v1 stable
-- "Test balance" button — nice UX, not essential for launch
-- Volume control, multi-band EQ, wired headphone support, cloud sync — explicitly out of scope
+**Defer (v1.2+):**
+- Export/import JSON settings
+- Notification "Apply now" action
+- Per-device nicknames
+- Quick Settings Tile
+- i18n (French or other)
+- Boost above 0 dB (amplification strategy not yet designed)
 
 ### Architecture Approach
 
-The app follows a clean layered architecture with a foreground service as the central orchestrator. `AudioControlService` owns all `AudioEffect` lifecycle; it is the only component that creates or destroys effect instances. A `BTConnectionReceiver` (manifest-declared, exempt from implicit broadcast restrictions) receives A2DP state changes and delegates to the service via `startForegroundService()`. `DeviceSettingsRepository` wraps DataStore and exposes `Flow<List<DeviceSettings>>` consumed by both `MainViewModel` (UI) and `AudioControlService` (effect application). The ViewModel binds to the service via `ServiceBinder` for real-time status. Build order must follow dependency direction: DataStore/Repository → AudioEffectManager (POC) → AudioControlService → Receivers → ViewModel → Compose UI.
+The existing MVVM + ForegroundService architecture is extended, not restructured. The key structural change is replacing the `Triple<String, Float, Boolean>` return type of `getAllDevicesFlow()` with a `DeviceEntry` data class carrying a fourth `gainOffset: Float` field — this is a compile-forced change that touches BalanceRepository, DeviceListViewModel, and DeviceUiState, but nothing outside the data flow chain. All gain math is centralized in a new private `applyGains(balance: Float, gainOffset: Float)` helper in AudioBalanceService — this is the architectural invariant that prevents the overwrite pitfall. The FAQ screen adds one leaf composable and one NavHost route. The data flow for gain offset mirrors balance exactly.
 
-**Major components:**
-1. `AudioControlService` (foreground, `connectedDevice` type) — BT monitoring, effect orchestration, coroutine scope
-2. `AudioEffectManager` — creates/destroys `AudioEffect` instances; session 0 primary path with per-session fallback; supports `OnControlStatusChangeListener` for server-restart recovery
-3. `DeviceSettingsRepository` — single source of truth via DataStore; exposes Flow to both service and ViewModel
-4. `BTConnectionReceiver` + `BootReceiver` — thin manifest-declared receivers; no logic, relay to service only
-5. `MainViewModel` — UI state aggregation via `StateFlow`; binds to service for live status
-6. Compose UI (`DeviceListScreen`, `SettingsScreen`) — stateless presentation driven by ViewModel
+**Major components and what changes:**
+1. `BalanceRepository` — add `DeviceEntry` data class; add `gainOffsetKey`, `getGainOffset`, `saveGainOffset`; update `getAllDevicesFlow()`
+2. `AudioBalanceService` — extract `applyGains(balance, offset)` helper; add `seed_gain_offset` intent handler; update both existing DP call sites to use the helper
+3. `DeviceListViewModel` — update combine lambda for `DeviceEntry`; add `_gainOffsetOverrides` StateFlow; add `onGainOffsetChange` / `onGainOffsetFinished` callbacks
+4. `DeviceUiState` + `ServiceState` — add `gainOffset: Float = 0f` to both
+5. `DeviceCard` — add gain offset slider + dB label; two new callback parameters
+6. `FaqScreen` (new file) — stateless composable; `LocalUriHandler.current.openUri()` for GitHub link; no ViewModel
+7. `AppNavigation` — add `"faq"` composable route with `launchSingleTop = true`; thread `onFaqClick` lambda into device_list route
 
 ### Critical Pitfalls
 
-1. **AudioEffect session 0 silently does nothing on OEM devices** — test on physical target hardware (Pixel + Samsung + Xiaomi) in Phase 1 before building any dependent features; if blocked, pivot to per-session-ID approach using `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION` broadcasts
+1. **Separate setInputGainbyChannel calls for balance and gain offset** — the second call overwrites the first silently. The only fix is one `applyGains(balance, gainOffset)` function that computes the composed per-channel dB value before any API call. There is no acceptable workaround; this must be the first implementation decision in Phase 1.
 
-2. **Wrong foreground service type (`mediaPlayback` instead of `connectedDevice`)** — `mediaPlayback` is banned from `BOOT_COMPLETED` on Android 15; `connectedDevice` is correct and unrestricted; declare `FOREGROUND_SERVICE_CONNECTED_DEVICE` permission in manifest and pass `ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` to `startForeground()`
+2. **Gain offset causing silent clipping** — positive gain boosts the signal above DAC ceiling without warning or exception. Constrain the slider range in the UI; display the numeric dB value always; consider a warning for positive values. Decide the upper bound (0 dB or +6 dB) before implementing the slider.
 
-3. **BLUETOOTH_CONNECT not requested at runtime on Android 12+** — declare in manifest AND request at runtime before any BluetoothAdapter call; omission causes silent `null` device names or `SecurityException` crash
+3. **Git history secrets before going public** — `local.properties`, `.jks`, `keystore.properties` may be in history. Recovery after a public push requires force-rewrite, secret rotation, and notifying all cloners. Prevention: run `git log --all --full-history -- "*.jks" "*.keystore" "keystore.properties" local.properties` before creating the repo; create as private first, verify with GitHub secret scanning, then make public.
 
-4. **A2DP receiver misses boot-time connection state** — `ACTION_CONNECTION_STATE_CHANGED` is not sticky; proactively query `BluetoothA2dp` profile proxy state in `onStartCommand` rather than waiting for the next event; covers "already connected at boot" case
+4. **ServiceState not extended for gain offset** — if `currentGainOffset` is not added to `ServiceState`, the UI slider shows 0 after BT reconnect while audio has the correct offset. Extend `ServiceState` in Phase 1 as part of service work, not as a UI afterthought.
 
-5. **OEM battery optimisation kills the foreground service** — no programmatic fix for Xiaomi/Huawei; add user-facing onboarding on first launch prompting for battery optimisation exemption and Xiaomi Autostart permission; implement `onTaskRemoved` restart receiver as last resort
-
-6. **AudioEffect invalidated on audio server restart** — register `OnControlStatusChangeListener`; on `controlGranted=false`, release and recreate the effect; always wrap `AudioEffect` constructor in `try/catch(RuntimeException)`
+5. **FAQ navigation back stack growth** — `navigate("faq")` without `launchSingleTop = true` stacks duplicate FAQ entries; multiple Back presses needed to exit. Apply `launchSingleTop = true` from day one; this is a leaf screen, it should never stack on itself.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested 3-phase structure follows data-dependency order, with GitHub last.
 
-### Phase 1: AudioEffect Feasibility POC
-**Rationale:** The entire project hinges on whether `AudioEffect` session 0 produces an audible balance shift on the target hardware. This is the single highest-risk unknown; all other phases are moot if this fails. Architecture research explicitly flags this as the first build step.
-**Delivers:** Validated audio effect approach (session 0 confirmed, or fallback strategy selected); `AudioEffectManager` skeleton with session 0 + per-session-ID fallback code paths
-**Addresses:** AudioEffect feasibility risk (FEATURES.md critical note; PITFALLS.md Pitfall 1)
-**Avoids:** Building a full service + UI on a foundation that may not work on the target device
+### Phase 1: Gain Offset (Data + Service + ViewModel + UI)
+**Rationale:** All gain-related layers (data, service, ViewModel, UI) are tightly coupled and should be implemented together to avoid a half-baked state where the apply function can overwrite itself. Implementing in dependency order within the phase (data layer → service layer → ViewModel → UI) is essential. Define `computeChannelGains()` and the slider range constraint as the very first steps before writing any UI or service code.
+**Delivers:** Per-device gain offset fully functional — persisted, applied on connect, reset on disconnect, real-time slider feedback, combined with balance in a single DP write, center snap, numeric dB label.
+**Addresses:** All P1 gain features from FEATURES.md.
+**Avoids:** Pitfalls 1 (separate calls overwriting), 2 (clipping range), 4 (ServiceState), 5 (DataStore key collision), 8 (UnsupportedOperationException on DP recreation).
 
-### Phase 2: Core Data + Persistence Layer
-**Rationale:** `DeviceSettingsRepository` is a dependency of both the service and ViewModel; building it early enables all other phases to be built in correct dependency order. No Android service dependencies — testable in isolation.
-**Delivers:** Room database schema (or DataStore-only if Room feels like overengineering), `DeviceSettings` data model (MAC, balance float, enabled bool), Repository with `Flow<List<DeviceSettings>>`, `DataStoreManager`
-**Uses:** Room 2.8.4 + DataStore 1.1.2 + KSP (STACK.md)
-**Implements:** `data/` layer (ARCHITECTURE.md)
+### Phase 2: FAQ Screen
+**Rationale:** No code dependencies on Phase 1 (FAQ is purely navigation + static content). Logically, however, the FAQ should link to the live GitHub repo URL, which requires Phase 3 to be complete or nearly complete. The recommended approach: implement FAQ in Phase 2 with a placeholder URL, and insert the real URL as the final step of Phase 3.
+**Delivers:** Static FAQ/About screen accessible from DeviceListScreen TopAppBar; explains app behavior, session-0 conflict risk, open source intent; clickable GitHub link.
+**Uses:** Existing navigation-compose, `LocalUriHandler.current.openUri()`, `Icons.Outlined.Info` (all already on classpath).
+**Avoids:** Pitfall 6 (back stack accumulation — use `launchSingleTop = true`).
 
-### Phase 3: Foreground Service + Bluetooth Detection
-**Rationale:** With AudioEffect validated (Phase 1) and persistence in place (Phase 2), the service can be built against real dependencies. The receiver, boot logic, and permission flow are tightly coupled and should be built together to test the full connect → effect-applied path.
-**Delivers:** `AudioControlService` with `connectedDevice` foreground type; `BTConnectionReceiver`; `BootReceiver`; BLUETOOTH_CONNECT runtime permission flow; proactive A2DP state query on service start; notification with device name and balance
-**Uses:** `connectedDevice` FGS type, `ServiceCompat.startForeground()`, `BluetoothA2dp` API (STACK.md)
-**Implements:** Full BT connection → effect applied data flow (ARCHITECTURE.md)
-**Avoids:** Pitfalls 2, 3, 4, 6 (service type, BT permission, missed boot state, AudioEffect server restart)
-
-### Phase 4: UI Layer
-**Rationale:** UI depends on ViewModel which depends on Repository (Phase 2) and Service (Phase 3); build last. Compose screens are presentation-only and have no blocking unknowns.
-**Delivers:** `MainActivity`, `DeviceListScreen` (device list + balance sliders), `SettingsScreen` (global toggle), `MainViewModel` with `StateFlow<UiState>`, bound-service connection to `AudioControlService`
-**Uses:** Jetpack Compose BOM 2026.03.00, Material3, Hilt navigation-compose (STACK.md)
-**Implements:** UI layer + ViewModel (ARCHITECTURE.md)
-
-### Phase 5: Polish + OEM Hardening
-**Rationale:** OEM battery optimisation issues (Xiaomi/Samsung) and the secondary feature set (JSON export, notification actions, timestamps) should be added after core functionality is validated end-to-end.
-**Delivers:** OEM battery optimisation onboarding flow (Xiaomi Autostart prompt, battery exemption request); JSON export/import with input validation; "Apply now" notification action; last-applied timestamp; `onTaskRemoved` restart receiver
-**Addresses:** v1.x features from FEATURES.md; Pitfall 5 (OEM kill); PITFALLS.md security note on JSON import validation
-**Avoids:** Shipping to Xiaomi/Samsung users with silent service death and no guidance
+### Phase 3: GitHub Public Repo
+**Rationale:** Pure documentation; no code dependencies. Must follow Phases 1 and 2 so the README documents the actual completed feature set. History audit is the mandatory first step — before creating the GitHub repository, not after.
+**Delivers:** Public repo at `github.com/Benibur/android-audio-balance` with README (what/why/build/ADB install/known limitations), MIT LICENSE, complete source; FAQ screen URL updated to the live repo.
+**Avoids:** Pitfall 3 (git history secrets — audit before pushing), Pitfall 4 (README build instructions — verify against a hypothetical fresh clone).
 
 ### Phase Ordering Rationale
 
-- Phase 1 must come first because the audio effect approach is the project's single architectural decision point; the two fallback strategies (session 0 vs per-session) require different code in `AudioEffectManager`
-- Phase 2 before Phase 3 because the service needs a working repository to look up balance coefficients; building with hardcoded values first is a false start
-- Phase 3 before Phase 4 because ViewModel binds to the service — it needs a real service to bind to
-- Phase 5 last because OEM hardening is additive and does not change core architecture; export/import requires stable data model from Phase 2
+- Phase 1 has the highest complexity and the most pitfall surface area; doing it first lets Phase 2 be a clean, low-risk finish.
+- Phase 2 is independent of Phase 1 at the code level but logically depends on Phase 1 being feature-complete (FAQ describes the full app including gain offset).
+- Phase 3 is strictly last because the README should document the final feature set and the FAQ screen needs the live repo URL.
+- Within Phase 1, build order is enforced by compile-time dependencies: `DeviceEntry` before service changes, service changes before ViewModel changes, ViewModel before UI.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1 (AudioEffect POC):** Session 0 behavior is device-specific and under-documented; hands-on physical device testing is the only reliable source of truth; may need to research `AudioManager.getActivePlaybackConfigurations()` API for per-session fallback implementation details
-- **Phase 3 (Foreground Service + BT):** BOOT_COMPLETED + foreground service interaction on Android 15 has nuanced restrictions; `CompanionDeviceManager` exemption path may need investigation if `connectedDevice` type proves insufficient
+No phase requires a `/gsd:research-phase` call during planning. Research files contain sufficient implementation detail to proceed directly to roadmap and plan creation.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2 (Data layer):** Room + DataStore patterns are extremely well documented; no unknowns
-- **Phase 4 (UI):** Jetpack Compose + ViewModel + StateFlow is the canonical Android UI pattern; no architectural unknowns
-- **Phase 5 (Hardening):** OEM-specific guidance is fully documented in PITFALLS.md; JSON export/import is straightforward
+Phases with standard patterns (all phases):
+- **Phase 1 (Gain Offset):** All APIs already in use in v1.0. Composition math is standard dB arithmetic. Implementation patterns are fully documented in STACK.md and ARCHITECTURE.md with code-level detail.
+- **Phase 2 (FAQ):** Stateless Compose screen + one navigation route. Completely standard patterns. No unknowns.
+- **Phase 3 (GitHub):** File creation + git audit commands. All steps documented in PITFALLS.md. No research needed.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM-HIGH | All library versions verified against official release notes; version compatibility matrix is confirmed; AudioEffect API status is LOW confidence due to OEM variability |
-| Features | MEDIUM | Table stakes derived from competitor analysis (Wavelet, Precise Volume) and user expectations; AudioEffect feasibility flag is well-reasoned |
-| Architecture | MEDIUM-HIGH | Component boundaries and data flows are HIGH confidence; AudioEffect session approach decision is MEDIUM due to deprecation ambiguity |
-| Pitfalls | MEDIUM-HIGH | Core Android API pitfalls are HIGH (official docs); OEM-specific kill mechanics are MEDIUM (community-maintained sources, no official OEM docs) |
+| Stack | HIGH | Direct codebase audit of all 21 source files + official Android API docs; version compatibility confirmed |
+| Features | HIGH | Gain API proven in v1.0 POC; feature set is minimal and fully scoped; FAQ and GitHub patterns are standard |
+| Architecture | HIGH | Composition math is sound dB arithmetic; DP setter semantics confirmed in AOSP source and v1.0 POC |
+| Pitfalls | HIGH | DynamicsProcessing setter semantics confirmed; git secrets workflow from GitHub official docs; navigation pitfalls from official Compose nav docs |
 
-**Overall confidence:** MEDIUM
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **AudioEffect session 0 on target hardware**: Cannot be resolved by research alone — requires physical device testing in Phase 1. Decision point: if session 0 fails, Phase 3 service architecture changes (must maintain a `Map<Int, AudioEffect>` per session instead of a single instance)
-- **Android 15 BOOT_COMPLETED + connectedDevice interaction**: Research indicates `connectedDevice` is unrestricted, but this should be verified on an Android 15 device early in Phase 3
-- **Per-channel EQ manipulation**: Research flagged that achieving true left/right balance via public `Equalizer` bands is not straightforward; the POC must determine the exact band manipulation strategy that produces audible balance (not just `setEnabled(true)`)
-- **Multiple simultaneous BT devices**: Architecture suggests a `Map<String, AudioEffect>` keyed by MAC; the policy for handling simultaneous connections (apply most-recently-connected, apply all, etc.) is not resolved in research
+- **Gain slider upper bound:** STACK.md recommends −12 dB to +10 dB; FEATURES.md recommends −12 dB to 0 dB (attenuation only). These differ on whether positive gain (boost) is exposed at all. The 0 dB cap is safer and matches the stated use case (normalizing loud headphones). Resolve as a design decision at the start of Phase 1 planning before implementing the slider range. Recommendation: start with 0 dB cap; can be extended to +6 dB in a future release if users request amplification.
+- **UnsupportedOperationException on DP recreation:** The VLC real-world reference provides MEDIUM confidence. The existing service already catches RuntimeException on DP creation; extending that catch to the `applyGains()` call sites is low-cost and should be included in Phase 1. Validate during Phase 1 implementation by testing the recovery path with a competing audio app.
+- **FAQ URL timing:** If Phase 2 (FAQ) is coded before Phase 3 (GitHub) is live, the GitHub URL must be a placeholder. Track this explicitly to avoid shipping a 404 link. Insert the real URL as the final step of Phase 3.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Android Bluetooth permissions docs](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions) — BLUETOOTH_CONNECT runtime requirement for API 31+
-- [Foreground service types reference](https://developer.android.com/develop/background-work/services/fgs/service-types) — `connectedDevice` type confirmed for BT monitoring
-- [Foreground service types required (Android 14)](https://developer.android.com/about/versions/14/changes/fgs-types-required) — MissingForegroundServiceTypeException behavior
-- [Android 15 foreground service types changes](https://developer.android.com/about/versions/15/changes/foreground-service-types) — BOOT_COMPLETED restrictions
-- [Implicit broadcast exceptions](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions) — A2DP broadcast exemption confirmed
-- [BluetoothA2dp API reference](https://developer.android.com/reference/android/bluetooth/BluetoothA2dp) — ACTION_CONNECTION_STATE_CHANGED, EXTRA_STATE, EXTRA_DEVICE
-- [Compose BOM reference](https://developer.android.com/develop/ui/compose/bom) — BOM 2026.03.00 confirmed latest stable
-- [AGP release notes](https://developer.android.com/build/releases/about-agp) — AGP 9.1.0 + Kotlin 2.3.10 confirmed stable
-- [Room release notes](https://developer.android.com/jetpack/androidx/releases/room) — Room 2.8.4 confirmed latest stable
+- [DynamicsProcessing API reference](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing) — setInputGainbyChannel signature, absolute setter semantics
+- [DynamicsProcessing.java source (AOSP)](https://android.googlesource.com/platform/frameworks/base/+/master/media/java/android/media/audiofx/DynamicsProcessing.java) — confirmed no Java-level clamping; setInputGainAllChannelsTo exists
+- [Navigation release notes](https://developer.android.com/jetpack/androidx/releases/navigation) — 2.9.7 confirmed stable (January 2026)
+- [Compose BOM mapping](https://developer.android.com/develop/ui/compose/bom/bom-mapping) — 2026.03.00 confirmed latest stable
+- [GitHub Docs: Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) — git filter-repo workflow
+- [Android Developers: Navigation with Compose](https://developer.android.com/develop/ui/compose/navigation) — launchSingleTop flag documentation
+- Project codebase direct audit (all 21 source files, 2026-04-07) — existing patterns, key naming, service architecture, BalanceMapper, AppNavigation
+- Project `POC-RESULTS.md` — confirmed setInputGainbyChannel is an absolute setter on target device; all-stages-false config mandatory
 
 ### Secondary (MEDIUM confidence)
-- [Esper: Why Android Equalizer Apps Don't Work with All Media Players](https://www.esper.io/blog/android-equalizer-apps-inconsistent) — session 0 vs per-session tradeoffs
-- [Wavelet GitHub Issue #312](https://github.com/Pittvandewitt/Wavelet/issues/312) — real-world session 0 failure on MIUI 14 / Android 13
-- [Equalizer broadcast tracker](https://github.com/pinpong/equalizer-issue-tracker/blob/master/EQUALIZER_BROADCAST.md) — per-session session ID broadcast protocol
-- [Don't Kill My App — Xiaomi](https://dontkillmyapp.com/xiaomi) — OEM kill mechanics and Autostart requirement
-- [Don't Kill My App — Samsung](https://dontkillmyapp.com/samsung) — One UI foreground service history
-- [Wavelet features documentation](https://pittvandewitt.github.io/Wavelet/Features/) — competitor feature reference
-- [Precise Volume 2.0 features documentation](https://precisevolume.phascinate.com/docs/features/) — competitor feature reference
+- [VLC commit: DynamicsProcessing UnsupportedOperationException catch](https://www.mail-archive.com/vlc-commits@videolan.org/msg67101.html) — real-world DP recreation race condition on new instances
+- [Navigation 3 announcement](https://android-developers.googleblog.com/2025/05/announcing-jetpack-navigation-3-for-compose.html) — confirmed alpha-only (1.0.0-alpha10); do not migrate
+- [Droidcon 2025: Common pitfalls in Jetpack Compose navigation](https://www.droidcon.com/2025/07/04/common-pitfalls-in-jetpack-compose-navigation/) — back stack growth patterns
+- [DEV Community: Android open source app secure build config](https://dev.to/ivanshafran/android-open-source-app-secure-build-config-38gi) — contributor build config patterns, local.properties documentation
+- [dr-lex.be: Programming Volume Controls](https://www.dr-lex.be/info-stuff/volumecontrols.html) — logarithmic vs linear gain perception reference
 
 ### Tertiary (LOW confidence)
-- [Google Issue Tracker #36936557](https://issuetracker.google.com/issues/36936557) — session 0 deprecation history; issue status unclear, no clean migration path
-- [androidx/media GitHub issue #310](https://github.com/androidx/media/issues/310) — ChannelMixingAudioProcessor as balance alternative; only for apps controlling their own playback, not applicable here
-- [Android AOSP commit 2fb43ef8](https://android.googlesource.com/platform/frameworks/base/+/2fb43ef8) — AudioEffect native crash on mediaserver restart; existence confirms recovery listener is needed
+- [GitHub open source license discussion](https://github.com/orgs/community/discussions/131758) — MIT as standard for personal Android apps (community consensus, not authoritative source)
 
 ---
-*Research completed: 2026-04-01*
+*Research completed: 2026-04-07*
 *Ready for roadmap: yes*

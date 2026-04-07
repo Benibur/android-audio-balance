@@ -1,181 +1,338 @@
 # Pitfalls Research
 
-**Domain:** Android background service — Bluetooth A2DP monitoring + system-wide AudioEffect balance control
-**Researched:** 2026-04-01
-**Confidence:** MEDIUM-HIGH (core Android API facts are HIGH; OEM-specific behaviour is MEDIUM due to lack of official OEM documentation)
+**Domain:** Android audio balance app — v1.1 milestone: per-device gain offset, FAQ screen, GitHub open source
+**Researched:** 2026-04-07
+**Confidence:** HIGH for DynamicsProcessing math and open-source secrets; MEDIUM for Compose navigation integration
+
+---
+
+> **Scope note:** This file covers pitfalls specific to the v1.1 milestone additions. Pitfalls from v1.0
+> (session 0 AudioEffect reliability, foreground service type, OEM battery kill, etc.) remain valid —
+> see the v1.0 PITFALLS.md for those. This file does not repeat them.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: AudioEffect Session 0 Is Silently Ignored on Many Devices
+### Pitfall 1: Gain Offset Applied Additively to Balance Gains — Wrong Channel Values
 
 **What goes wrong:**
-`AudioEffect` constructed with `audioSession = 0` attaches to the global output mix. On paper it still compiles and does not throw. In practice it silently does nothing on a significant fraction of devices running Android 10+, and its behaviour varies by OEM audio HAL implementation. Apps that test only on Pixel devices (where it often still works) ship code that breaks on Samsung One UI, MIUI/HyperOS, and others.
+The gain offset is naively stored as a scalar dB value and applied by adding it uniformly to both
+`setInputGainbyChannel(0, ...)` and `setInputGainbyChannel(1, ...)`. This produces wrong results:
+
+Example — device has balance L+50% and gain offset −6 dB:
+- Balance alone: L=0dB, R=−30dB (half attenuation)
+- Gain offset alone: both channels −6dB
+- Wrong naive sum: L=−6dB, R=−36dB
+- Correct combined: L=−6dB, R=−36dB ← identical in this case
+- BUT when balance is R+50% and offset is +3dB: L=−30dB+3dB=−27dB, R=0dB+3dB=+3dB
+  The right channel boosts above 0dB, which may clip or distort unexpectedly.
+
+The deeper problem: `setInputGainbyChannel` sets the *absolute* input gain, not a relative delta.
+Calling it multiple times for the same channel replaces, not accumulates, the value. So if the
+`applyDeviceBalance` function and a separate `applyGainOffset` function each call `setInputGainbyChannel`,
+only the last call wins — the other is silently discarded.
 
 **Why it happens:**
-Google deprecated session-0 global effects shortly after Android 2.3 but never removed the API. OEMs progressively cut support through their audio HALs without announcement. The Wavelet equalizer maintainer confirmed in 2023 (GitHub issue #312) that on MIUI 14 / Android 13, legacy session-0 mode no longer reaches apps that are not using `AudioTrack` directly.
+The current service has separate balance and gain offset values. Developers split them into
+separate apply calls (one for balance, one for offset), not realising `setInputGainbyChannel`
+is a setter, not an accumulator. The second call overwrites the first.
 
 **How to avoid:**
-- Treat session 0 as a best-effort path only. Build the POC/feasibility phase as a real device matrix test: Pixel (stock), Samsung One UI, Xiaomi MIUI/HyperOS.
-- If session 0 fails on the target device, the fallback is `Equalizer` attached per audio-session-ID (received via `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION` broadcasts from media player apps). This covers most music apps but not all system sounds.
-- Do not rely on session 0 producing any result without confirming on the exact target hardware.
-- The `MODIFY_AUDIO_SETTINGS` permission is required regardless and must be declared in the manifest.
+Compute the final per-channel gain as a single combined value before any `setInputGainbyChannel`
+call. The formula for a single merged apply call:
 
-**Warning signs:**
-- Balance change has no audible effect during development on non-Pixel device.
-- No exception is thrown — silence is the only signal.
-- Effect `getEnabled()` returns `true` but audio is unmodified.
-
-**Phase to address:**
-Phase 1 (Feasibility / POC) — must be validated before committing the architecture. This is the project's single highest-risk unknown.
-
----
-
-### Pitfall 2: Wrong Foreground Service Type Causes ForegroundServiceStartNotAllowedException
-
-**What goes wrong:**
-Developers building an audio-adjacent app default to `foregroundServiceType="mediaPlayback"`. This app does NOT play media — it monitors Bluetooth connections and applies effects. Using `mediaPlayback` is semantically incorrect and additionally triggers the Android 15 restriction that bans `mediaPlayback` services from starting via `BOOT_COMPLETED`.
-
-**Why it happens:**
-"It touches audio, so mediaPlayback seems right." The distinction between playing audio and modifying audio routing is subtle and poorly documented in tutorials.
-
-**How to avoid:**
-Use `foregroundServiceType="connectedDevice"` — this type covers "interactions with external devices requiring Bluetooth connection." It is NOT restricted from `BOOT_COMPLETED` receivers in Android 15. Required permissions:
-```xml
-<!-- Manifest -->
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-<!-- Runtime (Android 12+) — already needed for BT -->
-<!-- BLUETOOTH_CONNECT satisfies the connectedDevice prerequisite -->
+```kotlin
+fun computeChannelGains(balance: Float, gainOffsetDb: Float): Pair<Float, Float> {
+    // balance: -100f (full left) to +100f (full right)
+    // gainOffsetDb: e.g. -6f to +6f, applied equally to both channels
+    val fraction = balance.coerceIn(-100f, 100f) / 100f
+    val balanceLeftDb  = if (fraction > 0) -60f * fraction else 0f
+    val balanceRightDb = if (fraction < 0) -60f * (-fraction) else 0f
+    return Pair(
+        balanceLeftDb  + gainOffsetDb,
+        balanceRightDb + gainOffsetDb
+    )
+}
+// Single apply — never call setInputGainbyChannel twice for the same channel
+val (leftDb, rightDb) = computeChannelGains(balance, gainOffsetDb)
+dp?.setInputGainbyChannel(0, leftDb)
+dp?.setInputGainbyChannel(1, rightDb)
 ```
-Call `startForeground(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)` explicitly from the service.
+
+This is the only correct architecture: one function that owns all gain computation, called once
+per apply event.
 
 **Warning signs:**
-- `ForegroundServiceStartNotAllowedException` in logs on Android 14+ or 15+ devices at boot.
-- Google Play review rejection citing incorrect service type (not applicable here — sideload only — but good to know).
+- Changing balance slider has no audible effect after gain offset was applied (offset call
+  overwrote balance).
+- Gain offset appears to apply correctly in isolation but breaks when balance is non-zero.
+- Audio at `+3dB` gain offset + center balance sounds correct, but at `+3dB` + full-right
+  balance the left channel is unexpectedly audible.
 
 **Phase to address:**
-Phase 2 (Foreground Service + Boot) — manifest and service declaration.
+Phase 1 (Gain offset implementation) — define `computeChannelGains()` as the canonical single
+source of truth for all gain math before writing any UI or service integration.
 
 ---
 
-### Pitfall 3: BLUETOOTH_CONNECT Permission Not Requested at Runtime Causes Silent Failure on Android 12+
+### Pitfall 2: Gain Offset Range Causes Clipping or Silent Distortion
 
 **What goes wrong:**
-Pre-Android 12 code only declares `BLUETOOTH` and `BLUETOOTH_ADMIN` in the manifest. On Android 12+ (API 31+), querying paired devices, reading device names, or interacting with `BluetoothA2dp` profile raises `SecurityException` without `BLUETOOTH_CONNECT` being granted at runtime.
+`setInputGainbyChannel` accepts decibel values with no documented maximum. Positive gain values
+above 0dB boost the input signal. If the incoming audio is already near full scale (0dBFS),
+boosting by +6dB causes clipping distortion — typically heard as crackling or harsh distortion
+at high listening volumes. The effect does not warn, does not clamp, and does not show an error.
 
 **Why it happens:**
-Android 12 completely overhauled Bluetooth permissions. `BLUETOOTH` and `BLUETOOTH_ADMIN` no longer grant device access. `BLUETOOTH_CONNECT` is a new `PROTECTION_DANGEROUS` (runtime) permission requiring explicit user grant. Many older code samples and Stack Overflow answers predate this change.
+Developers familiar with hardware equalizers assume "gain" means perceived loudness, not signal
+amplitude. Boosting by +6dB on a full-scale signal doubles the amplitude beyond the DAC's range.
+The DynamicsProcessing documentation says nothing about clipping behavior on session 0.
 
 **How to avoid:**
-- Declare `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN` in the manifest with `android:maxSdkVersion` guards where appropriate.
-- Request `BLUETOOTH_CONNECT` at runtime before calling ANY `BluetoothAdapter` or profile proxy method on API 31+.
-- Use `ActivityCompat.checkSelfPermission` gating before any BT operation.
-- The permission is also required to read device names in `BluetoothDevice.getName()` — omitting it produces null names, not a crash.
+- Cap the gain offset slider to a range that is conservative in the positive direction.
+  Recommended: **−12dB to +6dB**. Beyond +6dB positive gain, clipping risk is too high for
+  general use on unknown source material.
+- Display the dB value numerically next to the slider so the user understands the unit.
+- Consider showing a warning label for positive values: "Boosting may cause distortion at
+  high volumes."
+- Do NOT allow the slider to reach values that produce a combined channel gain above +6dB.
+  If balance = center and offset = +10dB, both channels are at +10dB — clearly dangerous.
 
 **Warning signs:**
-- `SecurityException: Need android.permission.BLUETOOTH_CONNECT` in logcat.
-- Device name shows as `null` in the UI despite device being paired.
-- BT profile proxy callbacks never fire.
+- User reports crackling or distortion at certain settings.
+- Distortion only at high system volume + positive gain offset.
+- No error in logcat — the effect clamps silently at the hardware level.
 
 **Phase to address:**
-Phase 2 (Bluetooth detection) — implement the runtime permission flow in the same phase as BT monitoring.
+Phase 1 (Gain offset) — define dB range and slider constraints as a design decision before
+implementation, not after.
 
 ---
 
-### Pitfall 4: A2DP BroadcastReceiver Registered in Manifest Misses Boot-Time Connection Events
+### Pitfall 3: Git History Contains Build Secrets or Signing Config Before Going Public
 
 **What goes wrong:**
-A manifest-declared `BroadcastReceiver` for `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED` misses events that happen before the system finishes booting, or events that occur before the app process has started after `BOOT_COMPLETED`. If the device was already connected to BT headphones before the service started, the initial state is never received.
+The existing local project has a git history that may contain sensitive information. Before
+pushing to a public GitHub repository, the entire commit history must be clean. Common sensitive
+items in Android projects:
+
+- `local.properties` — contains `sdk.dir` (usually harmless) but sometimes also API keys
+  added manually by developers
+- `keystore.jks` / `*.keystore` — signing key files. If committed, anyone can re-sign APKs
+  with the same identity
+- `keystore.properties` — contains `storePassword`, `keyAlias`, `keyPassword` in plaintext
+- Hardcoded API keys in `BuildConfig`, `strings.xml`, or `gradle.properties` (not applicable
+  to this project currently, but worth auditing)
+- Debug SHA-1 fingerprints, package names, or internal server URLs in comments
+
+The risk: once pushed public, GitHub's secret scanning and web crawlers index the history
+immediately. Even if files are deleted in a later commit, the secret persists in the git
+object store and is visible via `git log --all`.
 
 **Why it happens:**
-`ACTION_CONNECTION_STATE_CHANGED` is not a sticky broadcast. A receiver that registers after the connection state changed will never see the prior state transition. Also, on Android 8+ background execution limits mean a manifest receiver for non-exempt implicit broadcasts may not be delivered while the app is fully stopped.
-
-`BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED` is on the implicit broadcast exception list, so manifest registration does work — but the receiver must proactively query current connection state at startup instead of waiting for the next event.
+Developers working alone on local projects never configure `.gitignore` carefully because
+"it's just local." When going public, they `git push --all` without auditing history first.
 
 **How to avoid:**
-1. In `onStartCommand` of the foreground service, proactively query current A2DP state via `BluetoothA2dp` profile proxy immediately after the service starts.
-2. Register the receiver dynamically (`Context.registerReceiver`) inside the service for runtime connection events.
-3. On `BOOT_COMPLETED`, start the foreground service, then query initial BT state — do not rely solely on broadcast delivery ordering.
+1. Before creating the public repo, audit the full history:
+   ```bash
+   git log --all --full-history -- "*.jks" "*.keystore" "keystore.properties"
+   git log --all --full-history -- "local.properties"
+   git grep -i "password\|apikey\|secret\|token" $(git log --all --pretty=format:"%H")
+   ```
+2. Ensure `.gitignore` contains at minimum:
+   ```
+   local.properties
+   *.jks
+   *.keystore
+   keystore.properties
+   .gradle/
+   build/
+   ```
+3. This project does not have API keys. The app is sideloaded, not Play Store signed. The
+   main risk is `local.properties` (sdk.dir) and any signing config if release builds were set up.
+4. If any sensitive file was ever committed, use `git filter-repo` (the modern replacement for
+   `git filter-branch`) to rewrite history before the first push.
+5. Create the GitHub repo as private first, push, verify history with GitHub's secret scanning
+   alerts, then make public.
 
 **Warning signs:**
-- Balance is not applied if the headphones were already connected before the phone booted.
-- Balance is not applied on the very first connection after app install (service not yet running).
+- `local.properties` appears in `git log --all` output.
+- Any `.jks` or `.keystore` file appears in `git log --all` output.
+- GitHub sends a security alert email immediately after going public (GitHub secret scanning
+  triggers on known patterns).
 
 **Phase to address:**
-Phase 2 (Bluetooth detection) — service startup logic must include proactive state query.
+Phase 3 (GitHub open source) — explicit pre-push history audit is the first step, before
+creating the public repository.
 
 ---
 
-### Pitfall 5: OEM Battery Optimisation Kills the Foreground Service Anyway
+### Pitfall 4: README Build Instructions Are Wrong for Contributors — Missing .gitignored Files
 
 **What goes wrong:**
-Despite being a foreground service with a persistent notification, the service is killed by OEM battery-management layers on Xiaomi (MIUI/HyperOS), Huawei (EMUI), Samsung (One UI before 6.0), and Oppo/Vivo/Realme devices. The service is stopped silently — no exception, no log entry visible to the app.
+The README says "clone and build" but the project requires `local.properties` (pointing to the
+Android SDK path) and possibly a signing config that are excluded from the repository. A fresh
+clone fails with a cryptic Gradle error like:
+```
+SDK location not found. Define a valid SDK location with an sdk.dir key in local.properties file...
+```
+Contributors and the user themselves (on a fresh machine) cannot build without knowing this.
 
 **Why it happens:**
-These OEMs layer proprietary background-kill mechanics on top of standard Android foreground service guarantees. Xiaomi in particular requires a separate "Autostart" permission that is off by default. Samsung before One UI 6.0 restricted wake locks in foreground services. None of these have public APIs.
+The developer knows `local.properties` is auto-generated by Android Studio and doesn't think
+of it as something to document. Contributors without Android Studio experience don't know
+where to create it.
 
 **How to avoid:**
-- **Xiaomi**: There is no programmatic fix. Use the library at `github.com/XomaDev/MIUI-autostart` to detect whether Autostart is enabled and show an in-app prompt directing the user to `Settings > Apps > [App] > App permissions > Background autostart`. Also prompt the user to add the app to the "lock" list in the recent apps tray.
-- **Samsung One UI 6.0+**: Targeting Android 14 (`targetSdk=34`) with correct `connectedDevice` type gives the OS-level guarantee introduced in One UI 6.0.
-- **All OEMs**: On first launch, prompt the user to disable battery optimisation via `Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)`. This is allowed for sideloaded apps (Play Store restricts this permission request).
-- Include in-app guidance referencing `dontkillmyapp.com` per-manufacturer steps.
-- Implement `onTaskRemoved` and a restart `BroadcastReceiver` as a last-resort self-restart mechanism (unreliable on Xiaomi but better than nothing).
+- README must include a "Prerequisites / Build" section listing every file that must be
+  created manually:
+  ```
+  # local.properties (not in repo)
+  sdk.dir=/path/to/Android/Sdk
+  ```
+- Include the Android Studio version and minSdk/targetSdk in the README.
+- Since there is no Play Store signing for this project (sideload only), release signing
+  complexity does not apply. Document that `debug` build is the correct build variant.
 
 **Warning signs:**
-- Balance stops applying after the phone screen is off for 10–30 minutes.
-- Notification disappears without user dismissal.
-- No crash log — service simply stops.
+- First comment on the GitHub repo is "I can't build this."
+- Gradle sync fails on fresh clone without helpful error message.
 
 **Phase to address:**
-Phase 3 (Hardening / OEM compatibility) — after core functionality works, add OEM-specific onboarding flows.
+Phase 3 (GitHub open source) — verify that a hypothetical fresh clone produces a buildable
+project by checking the README against the actual `.gitignore`.
 
 ---
 
-### Pitfall 6: AudioEffect Instance Is Silently Destroyed After Audio Server Restart
+## Moderate Pitfalls
+
+### Pitfall 5: Gain Offset DataStore Key Collision With Existing Keys
 
 **What goes wrong:**
-The Android `mediaserver`/`audioserver` process can crash and restart (rare but happens on some devices after phone calls, BT reconnections, or system updates). When this occurs, all native `AudioEffect` handles are invalidated. The Java object still exists but all operations become no-ops or throw `IllegalStateException`. The balance silently reverts to 0 until the app is restarted.
+The current `BalanceRepository` uses MAC address-derived keys: `balance_AA_BB_CC_DD_EE_FF`,
+`auto_apply_AA_BB_CC_DD_EE_FF`, `name_AA_BB_CC_DD_EE_FF`. Adding gain offset as a new key
+with the wrong prefix pattern (e.g., `gain_AA:BB:CC:DD:EE:FF` with colons instead of
+underscores) will not collide but will create a silent inconsistency: `getAllDevicesFlow()`
+filters on `balance_` prefix to enumerate known devices. If `getAllBalances()` or similar
+functions are used to discover devices, the gain offset key pattern must match or be independent.
 
-**Why it happens:**
-`AudioEffect` wraps a native resource tied to the audio server process. There is a known bug (Android platform commit `2fb43ef8`) where re-constructing an `AudioEffect` during `mediaserver` restart while in JNI critical state causes a crash. Even without that crash, the effect object is orphaned.
+A subtler bug: if the gain offset key accidentally starts with `balance_`, the device
+enumeration logic in `getAllDevicesFlow()` will try to parse it as a balance value, likely
+casting a Float as a Float (coincidentally works), but producing a ghost entry with a mangled
+MAC address in the device list.
 
 **How to avoid:**
-- Register an `AudioEffect.OnControlStatusChangeListener` — the callback fires when the effect loses control or the server restarts.
-- On receiving `controlGranted = false`, schedule re-application: tear down the existing `AudioEffect` instance, call `release()`, recreate and re-enable.
-- Always call `release()` on the existing instance before creating a new one to avoid native resource leaks.
-- Wrap AudioEffect construction in try-catch for `RuntimeException` (the constructor throws this, not a checked exception, if the effect cannot be created).
+Use a key function that mirrors the existing pattern exactly:
+```kotlin
+private fun gainOffsetKey(mac: String) = floatPreferencesKey("gain_offset_${mac.replace(":", "_")}")
+```
+The prefix `gain_offset_` does not start with `balance_`, so existing filtering is unaffected.
+Add a `getGainOffset(mac)` / `saveGainOffset(mac, dB)` pair to `BalanceRepository` following
+the same pattern as `getBalance` / `saveBalance`. Default is `0f` (no gain change).
 
 **Warning signs:**
-- `IllegalStateException` in `AudioEffect` method calls appearing in crash logs.
-- Balance silently drops to centre after a phone call or BT reconnect.
-- Logcat shows `audioserver` restarting: `"AudioFlinger serverDied()"`
+- Device list shows a mysterious extra entry with garbled name.
+- `getAllDevicesFlow()` emits more entries than there are known devices.
 
 **Phase to address:**
-Phase 2 (AudioEffect integration) — implement the listener and recovery path during initial implementation, not as an afterthought.
+Phase 1 (Gain offset) — data layer addition is the first implementation step; get the key
+naming right before writing service integration.
 
 ---
 
-### Pitfall 7: Android 13 Restricts Accessibility Service for Sideloaded Apps Requiring Extra User Step
+### Pitfall 6: Compose Navigation Back Stack Grows Without Bound When Adding FAQ Screen
 
 **What goes wrong:**
-If the AccessibilityService approach is chosen as the balance implementation method (fallback when AudioEffect fails), Android 13+ marks the service as "restricted" for apps installed via non-session-based package installers (direct APK sideload via file manager). The Accessibility settings entry is greyed out with "for your security, this setting is currently unavailable."
-
-**Why it happens:**
-Android 13 introduced "Restricted settings" to prevent malware installed via APK from abusing Accessibility APIs. Apps installed via ADB (`adb install`) are NOT subject to this restriction — only apps installed by tapping an APK file directly.
+The current `AppNavigation.kt` has two routes: `permissions` and `device_list`. Adding a
+third route `faq` with a navigation button on `DeviceListScreen` is straightforward, but the
+back stack behaviour of the `NavHost` means pressing "Back" from the FAQ screen returns to
+`device_list`, which is correct. However, if the FAQ screen is navigated to multiple times
+without `popUpTo`, the back stack accumulates duplicate `faq` entries. Pressing Back repeatedly
+cycles through `faq` → `faq` → `faq` → `device_list` instead of going directly to `device_list`.
 
 **How to avoid:**
-- **Use ADB for installation**: `adb install app.apk` bypasses the restricted-settings flag. This is already the stated deployment method (USB direct). Document this requirement explicitly.
-- **Do not use file-manager install**: Even for personal use, installing via file manager triggers the restriction.
-- Note: even with ADB install, the user must still manually enable the Accessibility Service in Settings — there is no programmatic way to enable it.
-- Also note: Google Play policy (January 2026 enforcement) tightened Accessibility API restrictions, but this is irrelevant for sideloaded apps.
+Use `launchSingleTop = true` when navigating to the FAQ screen:
+```kotlin
+navController.navigate("faq") {
+    launchSingleTop = true
+}
+```
+This prevents duplicate entries. The FAQ screen is a leaf — it has no nested navigation and
+should never stack on itself.
 
 **Warning signs:**
-- Accessibility service entry appears greyed out in Settings after install.
-- User reports "I can't enable it" — the restriction is not visible as an error in the app itself.
+- Pressing Back from FAQ takes multiple presses to return to device list.
+- `navController.backQueue.size` grows each time FAQ is opened.
 
 **Phase to address:**
-Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be decided and documented before committing to AccessibilityService as a fallback.
+Phase 2 (FAQ screen) — apply `launchSingleTop` in the navigate call from day one.
+
+---
+
+### Pitfall 7: Gain Offset Slider State Not Synced on BT Reconnect
+
+**What goes wrong:**
+When a BT device reconnects, the service applies the saved balance and (new) gain offset.
+The ViewModel that drives the UI reads the `ServiceState` flow, which in v1.0 only carries
+`currentBalance`. If `ServiceState` is not extended to include `currentGainOffset`, the UI
+shows the slider at its last remembered position (from a previous UI session or zero on fresh
+launch) while the audio has the correct offset applied by the service. The user sees a stale
+slider that does not reflect actual audio state.
+
+**How to avoid:**
+Extend `ServiceState` (or the equivalent data class exposed by the ViewModel) to include
+`currentGainOffset: Float = 0f`. The service sets this alongside `currentBalance` when
+applying gains on device connect. The ViewModel observes the full state and initialises
+both sliders from it.
+
+**Warning signs:**
+- Gain slider resets to 0 every time the app is opened, even though audio has the saved offset.
+- Balance slider shows correctly (already in `ServiceState`) but gain slider does not.
+
+**Phase to address:**
+Phase 1 (Gain offset) — extend `ServiceState` as part of the service integration work, not as
+a UI afterthought.
+
+---
+
+### Pitfall 8: DynamicsProcessing `UnsupportedOperationException` on `setInputGainbyChannel` After DP Recreation
+
+**What goes wrong:**
+After a DP recreation (triggered by `hasControl()` returning false), the new DP instance
+may be in a transitional state where `setInputGainbyChannel` throws
+`UnsupportedOperationException` wrapped as `AudioEffect: invalid parameter operation`.
+This was observed in VLC's codebase (they added a catch specifically for this). The existing
+service code catches `RuntimeException` on creation but not on `setInputGainbyChannel` calls.
+
+**Why it happens:**
+The native audio effect framework processes commands asynchronously. Calling
+`setInputGainbyChannel` immediately after `setEnabled(true)` on a newly created DP can race
+with internal initialization. The first call on a fresh instance occasionally fails.
+
+**How to avoid:**
+Wrap `setInputGainbyChannel` calls in try-catch for `RuntimeException` (which is the parent
+of `UnsupportedOperationException` in this context):
+```kotlin
+try {
+    dp?.setInputGainbyChannel(0, leftDb)
+    dp?.setInputGainbyChannel(1, rightDb)
+} catch (e: RuntimeException) {
+    Log.e(TAG, "setInputGainbyChannel failed: ${e.message}")
+    // Optionally: recreate DP and retry once
+}
+```
+The existing service already wraps creation — extend this pattern to the apply calls.
+
+**Warning signs:**
+- `AudioEffect: invalid parameter operation` in logcat, specifically after a DP recreation
+  event (hasControl loss due to competing app).
+- Gain appears not applied after the auto-recovery path.
+
+**Phase to address:**
+Phase 1 (Gain offset) — extend the existing error-handling pattern when refactoring the apply
+function to combine balance + gain offset.
 
 ---
 
@@ -183,13 +340,13 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Assume session 0 always works without device matrix test | Saves POC time | Ships broken on half of real-world devices | Never — test first |
-| Use `mediaPlayback` service type because it "sounds right" | No immediate issue on Android < 15 | `ForegroundServiceStartNotAllowedException` on Android 15+ at boot | Never |
-| Skip runtime permission check for BLUETOOTH_CONNECT on < API 31 | Simpler code path | `SecurityException` crash on API 31+ | Never — use `Build.VERSION.SDK_INT` guard |
-| Register BT receiver in manifest only, no proactive state query | Less code | Initial state missed on every boot | Never |
-| Skip `AudioEffect.release()` call | Slightly simpler lifecycle | Native audio server resource leak, potential crash on reconnect | Never |
-| Skip OEM battery optimisation guidance in onboarding | Faster first launch | Service silently dies on Xiaomi/Huawei; user thinks app is broken | Only acceptable in early POC, not in any shipped build |
-| Hard-code balance coefficient without per-MAC-address storage | Simpler MVP | Only one device supported; core requirement violated | Never |
+| Separate balance apply and gain offset apply — two `setInputGainbyChannel` calls | Less refactoring | Second call silently overwrites first; balance broken | Never |
+| Linear dB slider (equal pixel spacing across −12..+6 range) | Trivial to implement | Perceived gain changes feel uneven — most drag happens near 0dB | Acceptable for MVP if range is small (−6..+6); avoid for wider ranges |
+| Hardcode gain offset range to ±12dB without testing | Saves iteration | Clipping at high positive values; user confusion | Never without a clipping warning |
+| Skip `ServiceState` extension for gain offset | Faster service work | UI slider shows wrong value after reconnect | Never |
+| Push local project history to GitHub without auditing | Saves 30 minutes | Permanent secret exposure; requires force-push history rewrite | Never |
+| Skip `.gitignore` for `local.properties` | One fewer step | Build fails on fresh clone; contributor frustration | Never |
+| Create public repo immediately instead of private-first | Slightly faster | Cannot revert if secrets found during verification | Never |
 
 ---
 
@@ -197,12 +354,12 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| `BluetoothA2dp` profile proxy | Querying profile state immediately in `onReceive` before proxy is bound | Use `getProfileProxy()` callback; cache the proxy reference after `onServiceConnected` |
-| `AudioEffect` constructor | Not catching `RuntimeException` — it throws this (not a checked exception) if effect creation fails | Wrap in `try { ... } catch (RuntimeException e)` and handle gracefully |
-| `startForeground()` on Android 12+ | Calling without the `foregroundServiceType` parameter in the method call | Always pass `ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` as third argument |
-| `BOOT_COMPLETED` receiver | Starting service synchronously without checking if it is already running | Check `isServiceRunning()` or use `startForegroundService()` idempotently |
-| `BluetoothDevice.getName()` | Called without `BLUETOOTH_CONNECT` grant on API 31+ — returns null silently | Gate all `BluetoothDevice` name reads behind permission check |
-| `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` intent | Forgetting to declare `REQUEST_INSTALL_PACKAGES` or check current exemption state first | Check `PowerManager.isIgnoringBatteryOptimizations(packageName)` before requesting |
+| `BalanceMapper.toGainDb()` + gain offset | Call mapper separately, then add offset in a second `setInputGainbyChannel` call | Replace `BalanceMapper.toGainDb()` call sites with a new `computeChannelGains(balance, offset)` that returns the combined pair |
+| `BalanceRepository` + new gain offset key | Use colon-separated MAC in key name | Use `mac.replace(":", "_")` consistently, prefix `gain_offset_`, default 0f |
+| `ServiceState` data class | Forget to add `currentGainOffset` field | Extend data class; update every `copy()` call in the service; update ViewModel observation |
+| `onStartCommand` `seed_balance` action | Sends balance only; gain offset not re-applied | Either add a `seed_gain` action or rename to `seed_device_settings` and carry both values |
+| Compose `NavHost` FAQ route | `navigate("faq")` without `launchSingleTop` | Add `launchSingleTop = true`; FAQ is a leaf screen, never needs stacking |
+| GitHub `.gitignore` | Commit `local.properties` assuming it has no secrets | Always exclude; document the required manual creation step in README |
 
 ---
 
@@ -210,9 +367,9 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Polling Bluetooth connection state in a loop | Battery drain, wakeups, OEM aggressive-kill trigger | Use event-driven `BroadcastReceiver` only — no polling | Immediately at scale of 1 device |
-| Creating a new `AudioEffect` on every BT connection event without releasing the old one | Audio glitches, native memory growth, eventual crash | Keep a single `AudioEffect` instance; release and recreate only when needed | After ~10 reconnect cycles |
-| Holding `BluetoothA2dp` profile proxy open after use and never closing it | Minor resource leak, possible stale state | Call `adapter.closeProfileProxy(PROFILE, proxy)` when no longer needed or in service `onDestroy` |  Long-running sessions |
+| Calling `setInputGainbyChannel` on every slider drag event (continuous) | Excessive JNI calls on slider move; potential audio glitches | Apply gains only on `onValueChangeFinished` / slider release, not `onValueChange` | Immediately — slider drags generate many events per second |
+| DataStore write on every slider drag | Disk writes on every frame; ANR risk on slow devices | Write to DataStore only on slider release, same as gain apply | Immediately on fast slider moves |
+| Recompute `computeChannelGains` inside composition (no `remember`) | Recomputes on every recomposition | Derive gains in ViewModel, not in `@Composable` | Whenever the parent composable recomposes for unrelated reasons |
 
 ---
 
@@ -220,9 +377,10 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Storing per-device balance config in shared external storage | Another app reads/modifies balance coefficients | Use `Context.getFilesDir()` (internal storage) or `SharedPreferences` — not `Environment.getExternalStorageDirectory()` |
-| Exporting JSON config without input validation on import | Malformed import crashes app or injects unexpected values | Validate all fields on import: MAC address format, balance value range [-1.0, 1.0] |
-| Broadcast `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION` receiver without permission check | Any app can spoof session IDs and trigger effect re-application | This is a standard Android broadcast — not a security risk in this context since no sensitive data is exposed |
+| `local.properties` committed to git history | SDK path exposure (low risk) but establishes bad habit; path may reveal username | Add to `.gitignore` before first commit; verify with `git log -- local.properties` |
+| Keystore file committed if release signing was ever configured | Anyone can sign APKs with the same certificate identity | `git log --all -- "*.jks" "*.keystore"` before going public; use `git filter-repo` to remove if found |
+| Hardcoded debug SHA-1 in source comments | Low risk for this app (no server-side validation) | Grep history for SHA patterns before making repo public |
+| `gradle.properties` with signing credentials | Credentials exposed | Exclude from repo; document that this file is not needed for debug builds (sideload only) |
 
 ---
 
@@ -230,24 +388,27 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No onboarding for OEM battery optimisation | Service gets killed; user thinks app is broken, uninstalls | Show a one-time prompt on first launch for Xiaomi/Samsung/Huawei detected devices with direct deep-link to the relevant settings screen |
-| Applying balance immediately on slider drag (no confirmation) | Accidental extreme L/R balance with no way to recover without app open | Apply balance only on slider release (`onStopTrackingTouch`); add "Reset all" action |
-| Silent failure when AudioEffect session 0 does nothing | User configures balance, hears no change, doesn't know why | Include a "test balance" button that plays a short sine wave through the AudioTrack used to verify the effect chain works |
-| Notification with no actionable content | User dismisses notification, service moves to background (not possible, but feels intrusive) | Notification should show current active device name and balance value; include a "Disable" quick action |
-| No indication that the service is active and monitoring | User can't tell if auto-apply is working | Show current BT device in notification; update notification text when device connects/disconnects |
+| Linear position to linear dB mapping on gain slider | Slider feels coarse at high boost, too sensitive near 0 — but for a ±6dB or ±12dB range this is less noticeable than for wide ranges | For a ±12dB range, linear mapping is acceptable; label tick marks at −12, −6, 0, +6, +12 dB |
+| No numeric dB readout next to slider | User does not know what "gain offset" means or what value they set | Show current value as text (e.g. "−3 dB") beside the slider; update in real time on drag |
+| Gain slider resets to 0 when navigation returns to device list | User thinks their setting was lost | Read from DataStore / `ServiceState`; initialise slider with saved value on composition |
+| Gain offset label says "Volume" without "dB" unit | User expects phone volume control behaviour — confuses offset with absolute volume | Label clearly as "Gain offset" or "Volume trim" with the dB unit always visible |
+| FAQ screen accessible only via deep navigation — no obvious entry point | User never discovers FAQ | Add a settings/info icon button in the top app bar of `DeviceListScreen`; do not put FAQ behind a hamburger menu |
+| "Open source" link in FAQ opens browser to 404 (repo not yet public when FAQ is coded) | Embarrassing UX on first run | Write the FAQ screen after the GitHub repo is live and verified public, or use a placeholder URL that redirects |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **AudioEffect balance**: Effect is "enabled" but verify with actual audio output on the physical target device — not just emulator or Pixel
-- [ ] **Boot persistence**: Test by fully rebooting the device with BT headphones already paired; service must apply balance without any user interaction
-- [ ] **Permission flow on Android 12+**: Test fresh install with all permissions denied, then grant one by one — no crash at any step
-- [ ] **Foreground service type**: Verify `adb shell dumpsys activity services [package]` shows `type=connectedDevice` not `type=none`
-- [ ] **OEM kill resilience on Xiaomi**: Test with Autostart disabled — app must detect this and prompt the user
-- [ ] **AudioEffect release on service stop**: Verify no `AudioEffect` native leak after `onDestroy` via `adb shell dumpsys media.audio_flinger`
-- [ ] **JSON import validation**: Import a file with an out-of-range balance value (e.g., 5.0) — must be rejected gracefully
-- [ ] **Multiple BT devices**: Connect device A (balance set), disconnect, connect device B (different balance), disconnect, reconnect A — verify correct balance each time
+- [ ] **Gain combining:** Verify that a device with balance L+50% AND gain −6dB produces L=−6dB, R=−36dB — not two separate applies that overwrite each other.
+- [ ] **Gain offset persistence:** Disconnect BT device, close app, reopen app, reconnect device — gain slider must show saved value, audio must have offset applied.
+- [ ] **Clipping test:** Set gain to +6dB, play audio at maximum system volume — verify no distortion (or document expected behaviour if distortion occurs).
+- [ ] **DataStore key audit:** No `gain_offset_` key starts with `balance_`; `getAllDevicesFlow()` still returns exactly the same device count as before.
+- [ ] **Navigation back stack:** Open FAQ 5 times in a row via the nav button — Back must return to device list in one press.
+- [ ] **ServiceState sync:** Service applies +3dB gain on reconnect; ViewModel's observed state carries +3dB; UI slider initialises to +3dB position.
+- [ ] **Git history clean:** `git log --all --oneline -- local.properties "*.jks" "*.keystore"` returns zero results before the first push.
+- [ ] **Fresh clone build:** Delete `local.properties`, run Gradle sync — error message is exactly the sdk.dir error documented in README; no other missing file.
+- [ ] **FAQ URL works:** GitHub repo URL in FAQ resolves to a public page, not a 404 or redirect-to-login.
+- [ ] **`setInputGainbyChannel` error handling:** Trigger DP recreation (by opening a competing audio effect app), then change balance — verify no crash and gains are applied correctly after recovery.
 
 ---
 
@@ -255,11 +416,12 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Session 0 AudioEffect confirmed non-functional on target device | HIGH | Pivot to per-session-ID approach: register for `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION`, apply effect to each received session. Covers music apps but not system sounds. |
-| Wrong foreground service type deployed | LOW | Change manifest `foregroundServiceType`, update `startForeground()` call, rebuild, redeploy via ADB |
-| BLUETOOTH_CONNECT permission crash on Android 12 | LOW | Add runtime permission request before BT operations; rebuild |
-| Service killed on Xiaomi despite foreground | MEDIUM | Add OEM detection + user guidance screen; this cannot be fixed programmatically — requires user action |
-| AudioEffect not releasing, audio server crash | MEDIUM | Add `OnControlStatusChangeListener`, implement full release/recreate cycle, add try-catch around constructor |
+| Separate apply calls discovered after implementation | LOW | Introduce `computeChannelGains()`, replace all call sites; no API or data model change needed |
+| Clipping distortion from high gain — user feedback | LOW | Cap slider range in XML/Compose `valueRange`; existing values above cap may need migration |
+| Secret found in git history after going public | HIGH | Rotate the secret (if applicable); use `git filter-repo` to rewrite history; force-push; notify all cloners; make repo private during rewrite |
+| DataStore key collision creating ghost device entries | MEDIUM | Add a one-time migration to remove malformed keys; update key function; release new build |
+| FAQ screen URL broken after repo URL changes | LOW | Update the FAQ string resource; no data migration needed |
+| Gain slider shows 0 on reconnect (ServiceState not extended) | LOW | Extend `ServiceState`, rebuild — no persistent data change |
 
 ---
 
@@ -267,31 +429,35 @@ Phase 1 (Feasibility) — the deployment method (ADB vs. file sideload) must be 
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Session 0 AudioEffect unreliable across OEMs | Phase 1 — Feasibility POC | Test on Pixel + Samsung + Xiaomi physical devices; confirm audible effect before proceeding |
-| Wrong foreground service type | Phase 2 — Foreground Service implementation | `adb shell dumpsys activity services` shows correct type; test boot on Android 15 device |
-| BLUETOOTH_CONNECT missing runtime request | Phase 2 — Bluetooth detection | Test fresh install on API 31+ device with all permissions denied |
-| A2DP receiver misses boot-time state | Phase 2 — Bluetooth detection | Reboot test with headphones pre-connected |
-| OEM battery kill (Xiaomi/Samsung) | Phase 3 — Hardening | Test on physical Xiaomi with Autostart disabled; verify prompt is shown |
-| AudioEffect destroyed on server restart | Phase 2 — AudioEffect integration | Implement `OnControlStatusChangeListener` before considering feature complete |
-| Accessibility restriction for sideloaded APK | Phase 1 — Feasibility (if AccessibilityService chosen as fallback) | Install via `adb install`, verify accessibility entry is not greyed out |
+| Gain combining (separate calls overwriting) | Phase 1 (gain offset) | Unit test `computeChannelGains(50f, -6f)` == `(−6f, −36f)`; ear test balance + offset together |
+| Gain offset causing clipping | Phase 1 (gain offset) | Define slider range constraint; test at max positive gain + max system volume |
+| DataStore key collision | Phase 1 (gain offset) | `getAllDevicesFlow()` device count unchanged after adding gain keys |
+| `ServiceState` missing gain offset | Phase 1 (gain offset) | Check that ViewModel exposes current gain offset after BT reconnect |
+| `setInputGainbyChannel` UnsupportedOperationException | Phase 1 (gain offset) | Verify try-catch wraps all apply calls; test recovery path with competing audio app |
+| Git history secrets | Phase 3 (GitHub) | `git log --all -- local.properties "*.jks"` must return empty |
+| README build instructions wrong | Phase 3 (GitHub) | Delete `local.properties`, run fresh Gradle sync, follow README |
+| Navigation back stack accumulation | Phase 2 (FAQ) | Open FAQ multiple times; Back returns to device list in one press |
+| FAQ URL broken | Phase 2 (FAQ) — defer URL insertion | Write FAQ text without hardcoded URL; insert URL as last step of Phase 3 |
+| Gain slider showing wrong value on reconnect | Phase 1 (gain offset) + Phase 2 (FAQ/UI) | BT reconnect test with non-zero saved gain offset |
 
 ---
 
 ## Sources
 
-- [Esper: Why Android Equalizer Apps Don't Work with All Media Players](https://www.esper.io/blog/android-equalizer-apps-inconsistent) — session 0 deprecation history
-- [Google Issue Tracker #36936557: Equalizer on audio session 0 should not be deprecated](https://issuetracker.google.com/issues/36936557) — community position
-- [Wavelet GitHub Issue #312: Legacy Mode and Enhanced session detection not working on Android 13](https://github.com/Pittvandewitt/Wavelet/issues/312) — real-world failure confirmation on MIUI 14
-- [Android Developers: Foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types) — `connectedDevice` type documentation (HIGH confidence)
-- [Android Developers: Changes to foreground service types for Android 15](https://developer.android.com/about/versions/15/changes/foreground-service-types) — BOOT_COMPLETED restrictions list (HIGH confidence)
-- [Android Developers: Restrictions on starting a foreground service from the background](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start) — exceptions list (HIGH confidence)
-- [Android Developers: Bluetooth permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions) — BLUETOOTH_CONNECT requirement (HIGH confidence)
-- [Don't Kill My App — Xiaomi](https://dontkillmyapp.com/xiaomi) — OEM kill mechanics (MEDIUM confidence — community-maintained)
-- [Don't Kill My App — Samsung](https://dontkillmyapp.com/samsung) — One UI foreground service history
-- [Esper: Android 13 sideloading restriction and Accessibility APIs](https://www.esper.io/blog/android-13-sideloading-restriction-harder-malware-abuse-accessibility-apis) — sideload + AccessibilityService restriction
-- [Android AOSP commit 2fb43ef8: AudioEffect native crash on mediaserver restart](https://android.googlesource.com/platform/frameworks/base/+/2fb43ef8c0b922c1bd0d7cb6867e30d702d4bdb8%5E!/) — native resource lifecycle bug
-- [Android Developers: Implicit broadcast exceptions](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions) — A2DP broadcast exemption status
+- [Android Developers: DynamicsProcessing reference](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing) — `setInputGainbyChannel` is a setter, not accumulator (HIGH confidence)
+- [VLC commit: catch UnsupportedOperationException in DynamicsProcessing](https://www.mail-archive.com/vlc-commits@videolan.org/msg67101.html) — real-world confirmation of setInputGainbyChannel throwing on recreation (MEDIUM confidence)
+- [CodePath: Storing Secret Keys in Android](https://guides.codepath.org/android/Storing-Secret-Keys-in-Android) — `.gitignore` patterns for Android (HIGH confidence)
+- [DEV Community: Android open source app secure build config](https://dev.to/ivanshafran/android-open-source-app-secure-build-config-38gi) — contributor build config patterns (MEDIUM confidence)
+- [GitHub Docs: Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) — `git filter-repo` workflow (HIGH confidence)
+- [DEV Community: How to think about .gitignore for Android Studio](https://dev.to/vast-cow/how-to-think-about-gitignore-for-android-studio-and-a-standard-practical-setup-9n5) — standard Android `.gitignore` setup (MEDIUM confidence)
+- [dr-lex.be: Programming Volume Controls](https://www.dr-lex.be/info-stuff/volumecontrols.html) — logarithmic vs linear gain perception (HIGH confidence — widely cited audio engineering reference)
+- [Droidcon 2025: Common pitfalls in Jetpack Compose navigation](https://www.droidcon.com/2025/07/04/common-pitfalls-in-jetpack-compose-navigation/) — `launchSingleTop`, back stack growth (MEDIUM confidence)
+- [Android Developers: Navigation with Compose](https://developer.android.com/develop/ui/compose/navigation) — `launchSingleTop` flag documentation (HIGH confidence)
+- Project `POC-RESULTS.md` — confirmed `setInputGainbyChannel` is an absolute setter; all-stages-false config mandatory (HIGH confidence — first-hand validation on target device)
+- Project `AudioBalanceService.kt` — current service architecture showing single-value balance apply pattern to extend (first-hand)
+- Project `BalanceRepository.kt` — existing DataStore key naming convention (first-hand)
+- Project `AppNavigation.kt` — existing two-route navigation structure to extend (first-hand)
 
 ---
-*Pitfalls research for: Android Bluetooth audio balance controller*
-*Researched: 2026-04-01*
+*Pitfalls research for: Android Bluetooth audio balance controller — v1.1 milestone*
+*Researched: 2026-04-07*

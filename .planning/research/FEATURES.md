@@ -1,193 +1,209 @@
 # Feature Research
 
-**Domain:** Android Bluetooth audio balance controller (personal use, per-device stereo compensation)
-**Researched:** 2026-04-01
-**Confidence:** MEDIUM — ecosystem surveyed via WebSearch + official Android docs; competitor features via Play Store listings and app documentation
+**Domain:** Android Bluetooth audio balance controller — v1.1 milestone (gain offset + FAQ + open source)
+**Researched:** 2026-04-07
+**Confidence:** HIGH for gain offset (same DynamicsProcessing API already proven in v1.0), MEDIUM for FAQ UX patterns (standard Material3 patterns, no deep research needed), HIGH for open source setup (well-established GitHub norms)
+
+---
+
+## Scope
+
+This research covers only the **new features for v1.1**. The v1.0 feature landscape (balance slider, auto-apply, device list, foreground service, boot receiver) is already built and validated. See git history for prior research.
+
+**Three new features:**
+1. Per-device gain offset (volume attenuation/boost via DynamicsProcessing inputGain)
+2. FAQ / About screen
+3. GitHub public repo (README + MIT license)
+
+---
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Features users assume exist. Missing these = product feels incomplete.
+Features the new milestone must deliver to feel complete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Per-device balance profile storage | Core premise — balance must survive app restarts and reconnections | LOW | Stored by MAC address in SharedPreferences or Room; MAC address is stable per device |
-| Persistent balance slider (left/right) | The only control users need; range -1.0 to +1.0 | LOW | Single float per device; UI is a slider centered at 0 |
-| Auto-apply on Bluetooth A2DP connect | The app's core value — no manual intervention needed | MEDIUM | BroadcastReceiver on `BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED`; complications with background restrictions on API 31+ |
-| Foreground service with persistent notification | Required by Android to stay alive in background; users expect it when auto-apply exists | MEDIUM | Use `connectedDevice` foreground service type (API 34+ requires explicit type); notification must show device name and current balance |
-| Auto-start on device boot | Without this, the app fails to apply balance after reboots — users notice | LOW | `BOOT_COMPLETED` receiver; on API 34+ cannot start foreground service directly from `BOOT_COMPLETED` — must use CompanionDeviceManager exemption or alternative pattern |
-| Device list with known headphones | Users need to see and manage their configured devices | LOW | Simple list with device name, MAC, balance value, and enable/disable toggle |
-| Enable/disable toggle per device | Users may want to temporarily skip auto-apply for a specific device | LOW | Single boolean flag per device profile |
-| Global enable/disable | Kill switch to deactivate all auto-apply without uninstalling | LOW | Single SharedPreference flag; notification action to toggle |
+| Gain offset slider per device | The feature is the milestone — users with loud/quiet headphones need volume normalization | MEDIUM | Uses `setInputGainAllChannelsTo(dB)` on the existing DP instance; same auto-apply, persist-by-MAC pattern as balance |
+| Gain persisted per MAC address | Mirroring balance behavior — users expect settings to survive reconnects | LOW | New DataStore key per MAC (`gain_offset_XX_XX_XX_XX_XX_XX`); default 0.0f dB |
+| Gain applied on device connect | Auto-apply at connect must include both balance AND gain — applying one but not the other would be a regression | LOW | Service `applyDeviceBalance()` must also call `setInputGainAllChannelsTo(gainDb)` |
+| Gain reset to 0 dB on disconnect | Mirror the balance reset behavior: no audio effect should persist after disconnect | LOW | `resetBalanceToCenter()` equivalent for gain: call `setInputGainAllChannelsTo(0f)` |
+| Real-time slider feedback | User expects to hear gain change while dragging, not just on release | MEDIUM | Same throttled service-intent pattern as balance slider (50ms debounce); requires new service action `seed_gain` |
+| Gain label showing dB value | Users need to see the current value in dB (e.g., "-6 dB", "+3 dB", "0 dB") | LOW | Display as float with one decimal, center shows "0 dB"; label above or below slider |
+| FAQ/About screen accessible from UI | Users expect a way to understand the app and find the source link | LOW | Single static screen; info icon in TopAppBar actions of DeviceListScreen |
+| GitHub repo URL visible in FAQ | Open source credibility — users expect a link to source code | LOW | Hardcoded URL string in FAQ screen; use `Intent(ACTION_VIEW)` to open browser |
+| MIT LICENSE file in repo | Standard open source expectation — no LICENSE = ambiguous rights | LOW | Single file at repo root; GitHub README badge |
+| README with build instructions | Contributors need to know how to build; visitors need to understand the project | LOW | Standard Android project README: what it is, prerequisites, how to build, how to install |
 
 ### Differentiators (Competitive Advantage)
 
-Features that set the product apart. Not required, but valuable.
+Features that go beyond the baseline and add real value for the v1.1 scope.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Export/import settings as JSON | Survive app reinstalls, share config across devices; Precise Volume and Wavelet don't prominently offer this | LOW | Serialize device profiles to JSON file; use `ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT` for file picker |
-| Quick Settings Tile (QS tile) | Toggle on/off without opening app; Android-Audio-Channel-QS-Tile proves users want this for audio channel toggles | MEDIUM | `TileService` implementation; tile state reflects global enable/disable |
-| "Test" balance button on device profile screen | Preview balance immediately without waiting for reconnect | LOW | Apply balance transiently while on the settings screen; restore on exit if user cancels |
-| Named device nicknames | Users may pair the same model twice or have confusing default BT names | LOW | Extra text field per profile; display nickname over BT device name |
-| "Apply now" action in notification | One-tap re-apply in case auto-apply was missed (e.g. race condition at connect) | LOW | PendingIntent action in the ongoing notification |
-| Last-applied timestamp per device | Confirm the auto-apply actually ran; useful for debugging | LOW | Store `lastAppliedAt: Long` per profile |
+| Gain + balance combined in a single DP apply | Attenuation and stereo correction applied atomically — no audio glitches from partial applies | LOW | Set both channels simultaneously using `setInputGainbyChannel(0, leftDb + gainOffset)` and `setInputGainbyChannel(1, rightDb + gainOffset)` — a single DP write vs two writes |
+| Gain with center snap (0 dB magnetic) | Prevents accidental tiny gain deviations from center — same quality as balance slider | LOW | Reuse existing snap logic: `if (abs(rawGain) <= 0.5f) snap to 0f` |
+| Notification text includes gain info | Users can verify gain is applied without opening the app | LOW | Extend `formatNotificationText()` to include gain if non-zero: "Bose QC35 • Balance: L+20% • -3 dB" |
+| FAQ explains the AudioEffect session 0 approach | Unique technical transparency — explains why the app works system-wide without root | LOW | One paragraph in FAQ; sets user expectations about potential conflicts with other audio apps |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem good but create problems.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Volume control | Natural complement to balance; Precise Volume bundles it | Separate Android audio stream concern; adds permission complexity; out of explicit project scope | Defer to a separate project/milestone explicitly noted in PROJECT.md |
-| Multi-band equalizer | Power users want full EQ; Wavelet and Poweramp EQ do this | Completely different audio effect API surface; requires per-session EQ management and Wavelet-style DUMP-permission ADB workaround for system-wide coverage; would dwarf the balance use case in complexity | Not built; users who need EQ can use Wavelet alongside this app |
-| AutoEQ database integration | Automated headphone correction sounds appealing | Requires shipping or fetching a 5000+ entry database; totally separate value proposition; Wavelet already does this well | Not built; the problem being solved is factory imbalance, not frequency response |
-| Cloud sync of profiles | Backup and cross-device sync convenience | Requires auth, backend, privacy policy; complete overkill for a personal-use tool | Use JSON export/import instead |
-| Per-app balance profiles | Different balance for Spotify vs YouTube seems useful | AudioEffect session management per app requires the Wavelet DUMP-permission ADB approach and continuous session monitoring; vastly increases complexity | System-wide balance only; single coefficient per device |
-| Wired headphone support | Some users have wired headphones with imbalance | Different audio routing detection (`ACTION_HEADSET_PLUG`); different profile key (no MAC address); would blur the Bluetooth-specific scope | Explicitly out of scope; project is BT-only |
-| Root-based AudioFlinger patching | Guaranteed system-wide effect | Requires root; disqualifies app from normal deployment; no one runs it | Use AudioEffect session 0 approach (works on most devices without root) |
-| Play Store publication | Wider reach | Involves Play Store policies, privacy declarations for Bluetooth permissions, potential review issues with AudioEffect / Accessibility use; adds ongoing maintenance burden | USB direct deployment as explicitly decided in PROJECT.md |
+| Separate gain + balance DP writes | Seems simpler to implement independently | Two sequential DP writes can create audible glitches or partial states; the combined write avoids this | Combine balance + gain into a single `setInputGainbyChannel()` call per channel |
+| Boost above 0 dB (amplification) | "Make it louder" is the most natural user request | DynamicsProcessing inputGain has no enforced max but Android audio routing will clip if the signal exceeds the DAC ceiling; Bluetooth A2DP codecs also clip; headphone damage risk | Cap slider max at 0 dB (attenuation only, no boost) — the use case is normalizing loud devices, not boosting quiet ones |
+| Separate gain screen / modal | Seems like clean separation of controls | Creates navigation friction; gain and balance are both per-device audio parameters that belong together | Add gain slider directly in DeviceCard below the balance slider — no new screen needed |
+| i18n FAQ content | Full localization seems professional | Scope creep for a personal tool; only one user; adds maintenance overhead | Write FAQ in French (Ben's language) or English only — no i18n infrastructure needed |
+| Fancy GitHub Actions CI in repo | Looks professional | Time-consuming setup, no real benefit for a personal USB-deployed app | Simple repo: code + README + LICENSE, no CI |
+| Contributing guide with PR templates | Standard open source hygiene | Overkill for a personal project unlikely to receive external contributions | Single CONTRIBUTING.md is optional; a note in README suffices |
+
+---
 
 ## Feature Dependencies
 
 ```
-[Global enable/disable toggle]
-    └──requires──> [Foreground service]
-                       └──requires──> [Auto-apply on BT connect]
-                                          └──requires──> [Per-device profile storage]
+[Gain offset slider UI]
+    └──requires──> [Gain DataStore key in BalanceRepository]
+                       └──requires──> [DataStore already set up (v1.0)]
 
-[Auto-start on boot]
-    └──requires──> [Foreground service]
-    └──requires──> [Per-device profile storage]
+[Gain auto-apply on connect]
+    └──requires──> [Gain DataStore key in BalanceRepository]
+    └──requires──> [Service applyDeviceBalance() updated to read gain]
+    └──requires──> [Balance apply already working (v1.0)]
 
-[Quick Settings Tile]
-    └──enhances──> [Global enable/disable toggle]
-    └──requires──> [Foreground service] (tile needs a service to signal)
+[Combined gain+balance DP write]
+    └──requires──> [BalanceMapper.toGainDb() updated to accept gain offset param]
+    └──requires──> [DynamicsProcessing instance (v1.0)]
 
-[Export/import JSON]
-    └──requires──> [Per-device profile storage]
+[Gain real-time slider feedback]
+    └──requires──> [New service intent action "seed_gain"]
+    └──requires──> [DeviceListViewModel: new onGainSliderChange() + onGainSliderFinished()]
+    └──requires──> [DeviceUiState: new gainOffsetDb: Float field]
 
-["Apply now" notification action]
-    └──requires──> [Foreground service]
-    └──requires──> [Per-device profile storage]
+[Notification with gain info]
+    └──requires──> [ServiceState: new currentGainDb: Float field]
+    └──requires──> [formatNotificationText() updated]
 
-[Test balance button]
-    └──requires──> [Per-device profile storage]
-    └──requires──> [Audio effect application logic] (shared with auto-apply)
+[FAQ screen]
+    └──requires──> [Navigation: new "faq" route added to AppNavigation]
+    └──requires──> [DeviceListScreen: info IconButton in TopAppBar actions]
+    └──enhances──> [GitHub repo URL] (links to actual repo)
 
-[AudioEffect session 0 balance application] ──conflicts──> [Per-app AudioEffect sessions]
-    (Session 0 = global mix; cannot combine with per-session approach)
+[GitHub public repo]
+    └──independent──> (no code dependencies; purely external)
+    └──enhances──> [FAQ screen] (FAQ can link to real URL)
 ```
 
 ### Dependency Notes
 
-- **Auto-apply on BT connect requires per-device profile storage:** The BroadcastReceiver reads the MAC address of the connected device and looks up the stored balance coefficient — no storage means no lookup.
-- **Global enable/disable requires foreground service:** The toggle is surfaced in the persistent notification; the service controls whether auto-apply logic runs.
-- **Auto-start on boot requires foreground service:** BOOT_COMPLETED receiver starts the foreground service, which then listens for BT events. On API 34+ (Android 14+), starting a foreground service of type `connectedDevice` from a background receiver requires the `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND` permission via CompanionDeviceManager.
-- **Test balance button shares audio logic with auto-apply:** Both call the same `applyBalance(coefficient)` function — the test button just does it inline in the UI without waiting for BT connect.
-- **AudioEffect session 0 conflicts with per-app sessions:** Using session 0 applies to the global output mix. This is intentional for system-wide balance but means you cannot simultaneously run per-session EQ effects independently.
+- **Gain and balance share the same DP instance.** Applying both correctly requires that `leftGainDb` and `rightGainDb` passed to `setInputGainbyChannel()` already incorporate both the balance attenuation AND the global gain offset. This means `BalanceMapper.toGainDb()` needs an additional `gainOffsetDb: Float` parameter (or gain is added after the fact), and the service must read both values before each DP apply.
+- **FAQ screen needs navigation plumbing.** `AppNavigation.kt` currently has two routes (`permissions`, `device_list`). Adding `faq` as a third route is straightforward. The info icon action in the `DeviceListScreen` TopAppBar triggers `navController.navigate("faq")`.
+- **GitHub repo is infrastructure, not code.** It has no build or runtime dependency on the app code. It can be set up independently and in parallel with code changes.
+- **Gain reset on disconnect is a service concern.** `resetBalanceToCenter()` must be extended (or a new `resetAllEffectsToCenter()` function created) to call `setInputGainAllChannelsTo(0f)` in addition to setting balance channels to 0f.
+
+---
 
 ## MVP Definition
 
-### Launch With (v1)
+### v1.1 Launch With
 
-Minimum viable product — what's needed to validate the concept.
+These are the three features of the milestone — all are required.
 
-- [ ] Per-device profile storage (MAC address → balance float) — core data model, everything else depends on it
-- [ ] Persistent balance slider UI per device — the only user-facing control
-- [ ] BT A2DP connect/disconnect detection — the trigger for auto-apply
-- [ ] AudioEffect session 0 balance application — the effect itself (or validated alternative if session 0 proves unreliable on test device)
-- [ ] Foreground service with minimal notification — required to survive background; shows current state
-- [ ] Auto-start on boot — without this the app is useless after reboot; must solve API 34+ restriction
-- [ ] Device list screen — view and manage known devices
-- [ ] Per-device enable/disable toggle — needed to handle devices user doesn't want auto-applied
-- [ ] Global enable/disable — essential kill switch
+- [ ] **Gain offset per device** — slider in DeviceCard showing dB value; persisted by MAC; applied on connect; reset on disconnect; real-time feedback while dragging; combined with balance in a single DP write; center snap at 0 dB
+- [ ] **FAQ / About screen** — static Compose screen explaining what the app does, why AudioEffect session 0 is used, mention of open source and link to GitHub repo; accessible via info icon in TopAppBar
+- [ ] **GitHub public repo** — `github.com/Benibur/android-audio-balance` with README (what it is, how to build, how to install via ADB, known limitations), MIT LICENSE file, and the current code
 
-### Add After Validation (v1.x)
+### Add After Validation (v1.2+)
 
-Features to add once core is working.
+Deferred per PROJECT.md — do not implement in v1.1.
 
-- [ ] Export/import JSON — add once profiles are stable and proven useful; low effort payoff
-- [ ] "Apply now" notification action — add if race condition on BT connect is observed in testing
-- [ ] Last-applied timestamp — add for debugging during early use, low cost
-- [ ] Named device nicknames — add if BT device names prove confusing in practice
+- [ ] Export/import JSON — useful once config grows; DataStore migration needed first
+- [ ] Notification "Apply now" action — add if race condition at connect is observed in real use
+- [ ] Per-device nicknames — add if BT device names prove confusing
+- [ ] Quick Settings Tile — add after v1 is stable
+- [ ] i18n — deferred explicitly in PROJECT.md
 
 ### Future Consideration (v2+)
 
-Features to defer until product-market fit is established.
+- [ ] Boost above 0 dB — requires clipping/limiting strategy; likely not needed for the target use case (factory-imbalanced headphones)
+- [ ] Test balance/gain button — preview effect without reconnecting
 
-- [ ] Quick Settings Tile — useful but more complex plumbing (TileService lifecycle); defer until v1 is stable
-- [ ] "Test balance" button — nice UX addition, defer to keep v1 scope minimal
-- [ ] Any volume control features — explicitly out of scope per PROJECT.md
+---
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Per-device profile storage | HIGH | LOW | P1 |
-| Balance slider UI | HIGH | LOW | P1 |
-| BT A2DP connect detection | HIGH | MEDIUM | P1 |
-| AudioEffect balance application | HIGH | MEDIUM (feasibility risk) | P1 |
-| Foreground service | HIGH | MEDIUM | P1 |
-| Auto-start on boot | HIGH | LOW-MEDIUM (API 34 caveat) | P1 |
-| Device list screen | HIGH | LOW | P1 |
-| Per-device enable/disable | HIGH | LOW | P1 |
-| Global enable/disable | HIGH | LOW | P1 |
-| Export/import JSON | MEDIUM | LOW | P2 |
-| "Apply now" notification action | MEDIUM | LOW | P2 |
-| Named nicknames | LOW | LOW | P2 |
-| Last-applied timestamp | LOW | LOW | P2 |
-| Quick Settings Tile | MEDIUM | MEDIUM | P3 |
-| Test balance button | LOW | LOW | P3 |
+| Gain offset slider in DeviceCard | HIGH | MEDIUM | P1 |
+| Gain persisted in DataStore | HIGH | LOW | P1 |
+| Gain applied on BT connect | HIGH | LOW | P1 |
+| Gain reset on disconnect | MEDIUM | LOW | P1 |
+| Combined balance+gain DP write | HIGH | LOW | P1 |
+| Real-time slider feedback | MEDIUM | LOW | P1 |
+| Center snap at 0 dB | LOW | LOW | P1 |
+| Notification includes gain | LOW | LOW | P2 |
+| FAQ / About screen | MEDIUM | LOW | P1 |
+| GitHub repo + README + LICENSE | MEDIUM | LOW | P1 |
 
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+---
 
-## Competitor Feature Analysis
+## Technical Notes for Implementation
 
-| Feature | Wavelet (headphone EQ) | Precise Volume 2.0 | Our Approach |
-|---------|----------------------|-------------------|--------------|
-| Per-device profiles | Yes — auto-loads on headphone connect | Yes — device-specific presets | Yes — MAC-keyed balance profiles |
-| Balance/pan control | Yes — Channel Balance slider | Yes — L/R Balance slider | Yes — primary and only audio control |
-| Auto-apply on BT connect | Yes — automatic profile load on connect | Yes — Bluetooth automation trigger | Yes — core feature |
-| System-wide audio effect | Yes — via DUMP permission (ADB step required) | Yes — via Accessibility Service (privacy concern) | Targeting AudioEffect session 0 (no extra permissions needed, but feasibility TBD) |
-| Foreground service | Yes | Yes | Yes |
-| Boot auto-start | Yes | Yes | Yes |
-| Export/import settings | Not prominently documented | Not prominently documented | Yes — JSON, planned for v1.x |
-| EQ bands | 9-band graphic EQ + AutoEQ | 10-band + parametric | None — balance only |
-| Scope | Full headphone EQ suite | Full audio Swiss Army knife | Single-purpose: per-device stereo balance |
-| Quick Settings Tile | Not documented | Not documented | v2+ consideration |
-| Notification action | Not documented | Not documented | "Apply now" in v1.x |
-| Complexity for user | Medium (DUMP permission setup) | High (many features, accessibility service) | Low (slider + BT connect = done) |
+### Gain Offset API
 
-**Competitive position:** Both Wavelet and Precise Volume are feature-heavy general-purpose audio tools. This app is intentionally minimal — one slider per Bluetooth device, auto-applied, nothing else. That simplicity is the differentiator for users who only need balance correction and don't want to configure a full EQ suite.
+`DynamicsProcessing.setInputGainAllChannelsTo(float gainDb)` — sets the same inputGain on all channels simultaneously (convenience wrapper). Available since API 28.
 
-## Critical Technical Feasibility Note
+`DynamicsProcessing.setInputGainbyChannel(int channel, float gainDb)` — sets per-channel. The current balance implementation already uses this.
 
-The most important non-feature to research before building features is **whether AudioEffect session 0 reliably controls stereo balance on Android 10+ without root**. This is explicitly flagged in PROJECT.md as the primary technical risk. Features are moot if the audio effect cannot be applied system-wide. The feasibility research phase must resolve this before any audio-effect-dependent features are scoped in detail.
+**Combining balance + gain correctly:**
+The existing `BalanceMapper.toGainDb(balance)` returns `(leftDb, rightDb)` where one channel gets `0f` and the other gets up to `-60f`. To add gain offset, the cleanest approach is to add `gainOffsetDb` to both outputs:
+```
+leftFinal  = leftDb  + gainOffsetDb
+rightFinal = rightDb + gainOffsetDb
+```
+Then call `setInputGainbyChannel(0, leftFinal)` and `setInputGainbyChannel(1, rightFinal)`. This is one combined DP write per channel, not two separate operations.
 
-Known approaches (confidence: MEDIUM, based on community reports):
-1. `AudioEffect` on session 0 with a custom effect UUID — works on many devices, deprecated in intent but not removed
-2. Wavelet-style DUMP permission via ADB — reliable but requires one-time ADB setup
-3. `AccessibilityService` — some apps use this but it's a UX friction point (scary permission dialog) and Google may restrict it further
+**Gain range recommendation:** -12 dB to 0 dB. Rationale: the use case is normalizing headphones that play too loud (attenuation), not amplification. -12 dB is a practical floor (half perceived loudness). Capping at 0 dB avoids clipping. The API accepts any float; we impose the constraint in the UI slider and the service clamp logic.
+
+**No explicit dB clamp in the Java API** — constraints are enforced at the native engine level. The Java wrapper accepts any float. Community precedent (VLC source) uses `20 * log10(volume)` for conversion.
+
+### FAQ Screen Content
+
+Recommended content:
+
+1. **What this app does** — "Automatically applies your saved stereo balance and volume offset each time you connect a Bluetooth audio device."
+2. **Why a persistent service** — "A foreground service keeps the app running in the background so it can detect Bluetooth connections. You will see a persistent notification."
+3. **Why it may conflict with other audio apps** — "This app uses Android's DynamicsProcessing on session 0 (the global audio mix). Only one app can control session 0 at a time. If another audio effect app is active, this app may be overridden."
+4. **Open source** — "This app is open source under the MIT license." + clickable link to GitHub repo.
+
+Navigation pattern: info icon (`Icons.Outlined.Info`) in `actions` of the `TopAppBar` in `DeviceListScreen`. Navigates to `"faq"` route. FAQ screen has a back navigation arrow (`navigationIcon` in its TopAppBar).
+
+### GitHub Repo Minimal Structure
+
+```
+android-audio-balance/
+├── README.md          (what + why + build instructions + ADB install)
+├── LICENSE            (MIT)
+├── app/               (existing Android project)
+└── .gitignore         (existing)
+```
+
+README sections: What it is (1 paragraph), Why it exists (factory imbalance problem), Requirements (Android 8+, Bluetooth), How to build (Android Studio or Gradle), How to install (ADB command), Known limitations (session 0 conflicts), License.
+
+---
 
 ## Sources
 
-- [Wavelet headphone equalizer — Features documentation](https://pittvandewitt.github.io/Wavelet/Features/)
-- [Precise Volume 2.0 — Features documentation](https://precisevolume.phascinate.com/docs/features/)
-- [Why Android Equalizer Apps Don't Work with All Media Players — Esper](https://www.esper.io/blog/android-equalizer-apps-inconsistent)
-- [Foreground service types — Android Developers](https://developer.android.com/develop/background-work/services/fgs/service-types)
-- [Restrictions on starting a foreground service from background — Android Developers](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)
-- [Bluetooth Device Equalizer — Google Play](https://play.google.com/store/apps/details?id=com.cac.bluetoothequalizer)
-- [Precise Volume 2.0 + Equalizer — Google Play](https://play.google.com/store/apps/details?id=com.phascinate.precisevolume)
-- [Wavelet: headphone equalizer — Google Play](https://play.google.com/store/apps/details?id=com.pittvandewitt.wavelet)
-- [XDA Forums — Android Audio Balance Settings discussion](https://xdaforums.com/t/audio-balance-settings.4138405/)
-- [Android Authority — Best equalizer apps for Android 2025](https://www.androidauthority.com/best-equalizer-apps-android-761240/)
-- [Android-Audio-Channel-QS-Tile — GitHub](https://github.com/VarunS2002/Android-Audio-Channel-QS-Tile)
+- [DynamicsProcessing API reference — Android Developers](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing)
+- [DynamicsProcessing.java source — Android Open Source Project](https://android.googlesource.com/platform/frameworks/base/+/master/media/java/android/media/audiofx/DynamicsProcessing.java)
+- [The New Dynamics Processing Effect in AOSP — Google Research](https://research.google/pubs/pub47502/)
+- [Display a top app bar — Jetpack Compose Developers](https://developer.android.com/develop/ui/compose/quick-guides/content/display-top-app-bar)
+- [VLC Android DynamicsProcessing usage — vlc-commits mailing list](https://www.mail-archive.com/vlc-commits@videolan.org/msg67101.html)
+- [Wavelet open source repo — GitHub](https://github.com/Pittvandewitt/Wavelet)
+- [Make a README — makeareadme.com](https://www.makeareadme.com/)
+- Existing v1.0 codebase: `AudioBalanceService.kt`, `BalanceRepository.kt`, `BalanceMapper.kt`, `DeviceCard.kt`, `AppNavigation.kt`
 
 ---
-*Feature research for: Android Bluetooth audio balance controller*
-*Researched: 2026-04-01*
+*Feature research for: Android BT audio balance controller — v1.1 milestone*
+*Researched: 2026-04-07*
