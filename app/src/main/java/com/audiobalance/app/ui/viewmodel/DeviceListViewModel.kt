@@ -21,6 +21,7 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
 
     private val repository = BalanceRepository(application)
     private val _sliderOverrides = MutableStateFlow<Map<String, Float>>(emptyMap())
+    private val _gainOffsetOverrides = MutableStateFlow<Map<String, Float>>(emptyMap())
 
     val uiState: StateFlow<DeviceListUiState> = combine(
         AudioBalanceService.stateFlow,
@@ -30,13 +31,14 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
         val deviceList = devices.map { deviceEntry ->
             val isConnected = deviceEntry.mac == serviceState.connectedDeviceMac
             val displayBalance = overrides[deviceEntry.mac] ?: deviceEntry.balance
+            val displayGainOffset = _gainOffsetOverrides.value[deviceEntry.mac] ?: deviceEntry.gainOffset
             DeviceUiState(
                 mac = deviceEntry.mac,
                 name = repository.getDeviceName(deviceEntry.mac) ?: deviceEntry.mac,
                 balance = displayBalance,
                 autoApplyEnabled = deviceEntry.autoApply,
                 isConnected = isConnected,
-                gainOffset = deviceEntry.gainOffset
+                gainOffset = displayGainOffset
             )
         }.sortedWith(compareByDescending<DeviceUiState> { it.isConnected }.thenBy { it.name })
 
@@ -44,6 +46,7 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DeviceListUiState())
 
     private var lastSendTimestamp = 0L
+    private var lastGainSendTimestamp = 0L
 
     private fun isConnectedDevice(mac: String): Boolean {
         return AudioBalanceService.stateFlow.value.connectedDeviceMac == mac
@@ -91,6 +94,41 @@ class DeviceListViewModel(application: Application) : AndroidViewModel(applicati
                     sendResetToService()
                 }
             }
+        }
+    }
+
+    fun onGainOffsetChange(mac: String, dB: Float) {
+        _gainOffsetOverrides.value = _gainOffsetOverrides.value + (mac to dB)
+        if (isConnectedDevice(mac)) {
+            val now = System.currentTimeMillis()
+            if (now - lastGainSendTimestamp >= 50) {
+                lastGainSendTimestamp = now
+                sendGainOffsetToService(dB)
+            }
+        }
+    }
+
+    fun onGainOffsetFinished(mac: String, rawDb: Float) {
+        _gainOffsetOverrides.value = _gainOffsetOverrides.value - mac
+        viewModelScope.launch {
+            repository.saveGainOffset(mac, rawDb)
+            if (isConnectedDevice(mac)) {
+                sendGainOffsetToService(rawDb)
+            }
+        }
+    }
+
+    private fun sendGainOffsetToService(gainOffsetDb: Float) {
+        val context = getApplication<Application>()
+        android.util.Log.d("DeviceListViewModel", "sendGainOffsetToService: gainOffset=$gainOffsetDb")
+        val intent = Intent(context, AudioBalanceService::class.java).apply {
+            putExtra("action", "seed_gain_offset")
+            putExtra("gain_offset", gainOffsetDb)
+        }
+        try {
+            context.startForegroundService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("DeviceListViewModel", "startForegroundService failed: ${e.message}")
         }
     }
 
