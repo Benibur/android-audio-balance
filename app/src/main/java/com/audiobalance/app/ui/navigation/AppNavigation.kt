@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.audiobalance.app.service.AudioBalanceService
 import com.audiobalance.app.ui.screens.DeviceListScreen
+import com.audiobalance.app.ui.screens.FaqScreen
 import com.audiobalance.app.ui.screens.PermissionScreen
 
 @Composable
@@ -47,7 +48,10 @@ fun AppNavigation() {
             )
         }
         composable("device_list") {
-            DeviceListScreen()
+            DeviceListScreen(navController = navController)
+        }
+        composable("faq") {
+            FaqScreen(navController = navController)
         }
     }
 }
