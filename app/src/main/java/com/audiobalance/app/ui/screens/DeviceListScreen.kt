@@ -11,8 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BluetoothSearching
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.audiobalance.app.R
 import com.audiobalance.app.ui.components.DeviceCard
 import com.audiobalance.app.ui.viewmodel.DeviceListViewModel
@@ -32,7 +35,8 @@ import com.audiobalance.app.ui.viewmodel.DeviceListViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceListScreen(
-    viewModel: DeviceListViewModel = viewModel()
+    viewModel: DeviceListViewModel = viewModel(),
+    navController: NavController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -44,6 +48,21 @@ fun DeviceListScreen(
                         text = stringResource(R.string.device_list_title),
                         style = MaterialTheme.typography.titleLarge
                     )
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            navController.navigate("faq") {
+                                launchSingleTop = true
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.faq_info_icon_description),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             )
         }
