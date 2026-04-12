@@ -24,7 +24,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Milestone Goal:** Add per-device gain offset control, publish a FAQ/About screen, and release the app as open source on GitHub.
 
 - [x] **Phase 4: Gain Offset** — Per-device dB gain slider, persisted and auto-applied alongside balance (completed 2026-04-12)
-- [ ] **Phase 5: FAQ Screen** — Static informational screen accessible from the device list
+- [x] **Phase 5: FAQ Screen** — Static informational screen accessible from the device list (completed 2026-04-12)
 - [ ] **Phase 6: Open Source** — Public GitHub repo with README, MIT license, and audited history
 
 ## Phase Details
@@ -54,7 +54,7 @@ Plans:
   2. The FAQ screen explains what the app does, why DynamicsProcessing is used, and what the balance and gain sliders control
   3. The FAQ screen includes a clickable link that opens the GitHub repo in the browser
   4. The FAQ screen includes a troubleshooting section warning about AudioEffect session 0 conflicts with other audio apps
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 05-01-PLAN.md — Strings + FaqScreen composable (accordion + footer, self-contained)
 - [ ] 05-02-PLAN.md — Wire "faq" route in AppNavigation + info icon in DeviceListScreen + human-verify
@@ -78,5 +78,5 @@ Plans:
 | 2. Service + Persistence | v1.0 | 3/3 | Complete | 2026-04-06 |
 | 3. UI | v1.0 | 4/4 | Complete | 2026-04-06 |
 | 4. Gain Offset | 2/2 | Complete   | 2026-04-12 | - |
-| 5. FAQ Screen | 1/2 | In Progress|  | - |
+| 5. FAQ Screen | 2/2 | Complete   | 2026-04-12 | - |
 | 6. Open Source | v1.1 | 0/? | Not started | - |

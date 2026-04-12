@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Gain Offset + FAQ + Open Source
 status: unknown
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-04-12T19:11:05.412Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-04-12T20:15:07.839Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 
 ## Current Position
 
-Phase: 05 (faq-screen) — EXECUTING
-Plan: 1 of 2
+Phase: 05 (faq-screen) — COMPLETE
+Plan: 2 of 2 (all plans complete)
 
 ## Accumulated Context
 
@@ -41,6 +41,7 @@ Recent decisions affecting current work:
 - [Phase 04-gain-offset]: applyGains() is the exclusive owner of all setInputGainbyChannel calls in AudioBalanceService
 - [Phase 04-gain-offset plan 02]: Used .value snapshot for _gainOffsetOverrides inside combine lambda — avoids changing combine arity; sufficient for transient UI state
 - [Phase 05-faq-screen]: faq_expand_description and faq_collapse_description added as separate strings (21 total) to satisfy UI-SPEC Accessibility Contract per-state contentDescriptions
+- [Phase 05-faq-screen]: launchSingleTop = true on FAQ navigate() call prevents duplicate back-stack entries from rapid taps
 
 ### Pending Todos
 
@@ -53,6 +54,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T19:11:05.410Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-12T20:00:00.000Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None

@@ -17,7 +17,7 @@ Requirements for v1.1 milestone. Each maps to roadmap phases.
 
 ### FAQ
 
-- [ ] **FAQ-01**: User can access a FAQ screen from the device list (info icon)
+- [x] **FAQ-01**: User can access a FAQ screen from the device list (info icon)
 - [x] **FAQ-02**: FAQ explains what the app does and why
 - [x] **FAQ-03**: FAQ mentions open source and links to the GitHub repo
 - [x] **FAQ-04**: FAQ includes troubleshooting for AudioEffect session 0 conflicts
@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GAIN-03 | Phase 4 | Complete |
 | GAIN-04 | Phase 4 | Complete |
 | GAIN-05 | Phase 4 | Complete |
-| FAQ-01 | Phase 5 | Pending |
+| FAQ-01 | Phase 5 | Complete |
 | FAQ-02 | Phase 5 | Complete |
 | FAQ-03 | Phase 5 | Complete |
 | FAQ-04 | Phase 5 | Complete |
