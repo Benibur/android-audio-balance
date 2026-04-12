@@ -29,4 +29,27 @@
     <string name="error_service_restart">Restart</string>
     <string name="error_permission_revoked">Bluetooth permission was removed. Tap to re-grant.</string>
     <string name="error_permission_fix">Fix</string>
+
+    <!-- FAQ screen -->
+    <string name="faq_screen_title">FAQ</string>
+    <string name="faq_info_icon_description">About this app</string>
+    <string name="faq_back_description">Back</string>
+    <string name="faq_q1_question">What is this app?</string>
+    <string name="faq_q1_answer">Audio Balance fixes left/right imbalance on Bluetooth headphones. When you connect a device, it automatically applies your saved balance and gain settings.</string>
+    <string name="faq_q2_question">How do the sliders work?</string>
+    <string name="faq_q2_answer">The balance slider shifts audio left or right (−100 to +100). The volume adjustment slider reduces the overall volume of a device in decibels (−12 dB to 0 dB). Both settings are saved per device and applied automatically on reconnect.</string>
+    <string name="faq_q3_question">Is this app open source?</string>
+    <string name="faq_q3_answer">Yes. Audio Balance is MIT licensed.</string>
+    <string name="faq_q3_link_label">View source on GitHub</string>
+    <string name="faq_q4_question">Does this app drain battery?</string>
+    <string name="faq_q4_answer">No significant impact. The app runs a foreground service that reacts to Bluetooth events only. There is no continuous polling or background processing.</string>
+    <string name="faq_q5_question">Which devices are supported?</string>
+    <string name="faq_q5_answer">Android 8.0 or higher. Bluetooth A2DP headphones only. Wired headphones and internal speakers are not supported.</string>
+    <string name="faq_q6_question">Why is another audio app overriding my settings?</string>
+    <string name="faq_q6_answer">Another equalizer, bass booster, or audio app may be taking control of audio processing. Close it and reconnect your headphones.</string>
+    <string name="faq_footer_link_label">View on GitHub</string>
+    <string name="faq_footer_link_description">Open GitHub repository</string>
+    <string name="faq_github_url">https://github.com/Benibur/android-audio-balance</string>
+    <string name="faq_expand_description">Expand</string>
+    <string name="faq_collapse_description">Collapse</string>
 </resources>
