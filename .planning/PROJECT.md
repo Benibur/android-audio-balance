@@ -22,7 +22,7 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 
 ### Active
 
-- [ ] Gain offset par device — slider dB pour atténuer/booster le volume global via DynamicsProcessing, persisté par MAC
+- ✓ Gain offset par device — slider dB pour atténuer le volume global via DynamicsProcessing, persisté par MAC — Phase 04
 - [ ] Écran FAQ — explication de l'app, mention open source, lien vers le repo GitHub
 - [ ] Repo GitHub public — README, licence MIT, code source sur github.com/Benibur/android-audio-balance
 
@@ -80,4 +80,4 @@ Quand je connecte mes écouteurs Bluetooth, la balance stéréo que j'ai configu
 | Uniquement Bluetooth | Scope limité au problème réel (écouteurs BT déséquilibrés) | ✓ Good |
 
 ---
-*Last updated: 2026-04-07 after v1.1 milestone start*
+*Last updated: 2026-04-12 after Phase 04 (gain-offset) complete*
