@@ -54,7 +54,10 @@ Plans:
   2. The FAQ screen explains what the app does, why DynamicsProcessing is used, and what the balance and gain sliders control
   3. The FAQ screen includes a clickable link that opens the GitHub repo in the browser
   4. The FAQ screen includes a troubleshooting section warning about AudioEffect session 0 conflicts with other audio apps
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Strings + FaqScreen composable (accordion + footer, self-contained)
+- [ ] 05-02-PLAN.md — Wire "faq" route in AppNavigation + info icon in DeviceListScreen + human-verify
 
 ### Phase 6: Open Source
 **Goal**: The app's source code is publicly available on GitHub with a clear README and MIT license
