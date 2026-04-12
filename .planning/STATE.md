@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Gain Offset + FAQ + Open Source
 status: unknown
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-04-12T20:15:07.839Z"
+last_updated: "2026-04-12T20:17:24.613Z"
 progress:
   total_phases: 3
   completed_phases: 2
