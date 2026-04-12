@@ -23,7 +23,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone Goal:** Add per-device gain offset control, publish a FAQ/About screen, and release the app as open source on GitHub.
 
-- [ ] **Phase 4: Gain Offset** — Per-device dB gain slider, persisted and auto-applied alongside balance
+- [x] **Phase 4: Gain Offset** — Per-device dB gain slider, persisted and auto-applied alongside balance (completed 2026-04-12)
 - [ ] **Phase 5: FAQ Screen** — Static informational screen accessible from the device list
 - [ ] **Phase 6: Open Source** — Public GitHub repo with README, MIT license, and audited history
 
@@ -39,7 +39,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. When the device reconnects, the saved gain offset is applied together with balance in a single DynamicsProcessing call — no separate apply steps
   4. The foreground notification displays the current gain offset value when it is non-zero
   5. Gain offset survives app restart and phone reboot — the persisted value is restored from DataStore on reconnect
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md — Data layer + service: DeviceEntry, repository, applyGains helper, seed_gain_offset, notification
@@ -74,6 +74,6 @@ Plans:
 | 1. AudioEffect POC | v1.0 | 3/3 | Complete | 2026-04-05 |
 | 2. Service + Persistence | v1.0 | 3/3 | Complete | 2026-04-06 |
 | 3. UI | v1.0 | 4/4 | Complete | 2026-04-06 |
-| 4. Gain Offset | 1/2 | In Progress|  | - |
+| 4. Gain Offset | 2/2 | Complete   | 2026-04-12 | - |
 | 5. FAQ Screen | v1.1 | 0/? | Not started | - |
 | 6. Open Source | v1.1 | 0/? | Not started | - |

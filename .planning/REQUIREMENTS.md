@@ -9,7 +9,7 @@ Requirements for v1.1 milestone. Each maps to roadmap phases.
 
 ### Gain Offset
 
-- [ ] **GAIN-01**: User can adjust a per-device gain offset slider (dB) in the device card
+- [x] **GAIN-01**: User can adjust a per-device gain offset slider (dB) in the device card
 - [x] **GAIN-02**: Gain offset is persisted per MAC address and restored on reconnect
 - [x] **GAIN-03**: Gain offset and balance are composed into a single DynamicsProcessing call per channel
 - [x] **GAIN-04**: Gain offset auto-applies on BT connect (same behavior as balance)
@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GAIN-01 | Phase 4 | Pending |
+| GAIN-01 | Phase 4 | Complete |
 | GAIN-02 | Phase 4 | Complete |
 | GAIN-03 | Phase 4 | Complete |
 | GAIN-04 | Phase 4 | Complete |
