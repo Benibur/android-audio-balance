@@ -60,10 +60,27 @@ Hors scope : Play Store, signing de release APK (debug seulement), i18n multi-la
 - **État actuel connu** : `.gitignore` couvre déjà `local.properties`, `.idea`, `build/` — pas de `.jks` ni `keystore.properties` n'ont jamais été commités (vérifié au moment du discuss-phase).
 
 ### Stratégie du premier push
-- **Historique** : push historique complet (`git push --all`) — préserve le storytelling GSD/Claude Code, transparent sur le process de dev
+- **Historique** : push historique complet (`git push --all origin && git push --tags origin`) après nettoyage filter-repo — préserve le storytelling GSD/Claude Code
 - **Dossier `.planning/`** : reste public, pas de secrets dedans, démontre l'usage de GSD
+- **Branche** : **renommer `master` → `main`** avant le push (`git branch -m master main`) — convention GitHub moderne
 - **Tag** : créer `v1.1` sur le HEAD après le push
-- **Release GitHub** : attacher le debug APK (`app-debug.apk`) à la release v1.1 pour faciliter le sideload (l'user n'a pas besoin de builder)
+- **Release GitHub** : build **frais** du debug APK depuis le commit tagué v1.1 (`./gradlew assembleDebug` après checkout du tag) pour garantir la reproducibilité, puis l'attacher à la release v1.1
+
+### Nettoyage de l'historique (BLOQUANT avant push)
+- **Finding du researcher** : `local.properties` est tracké dans l'historique (commit `8244194` phase 00, toujours dans HEAD). Contenu : `sdk.dir=/home/ben/Android/Sdk`. Pas un mot de passe mais **viole success criterion #3** (sensitive local config files) et leak le home path.
+- **Décision** : utiliser `git filter-repo --path local.properties --invert-paths` pour retirer le fichier de tous les commits
+- **Conséquence** : les 121 SHAs de commit changent. Safe car aucun remote n'existe encore.
+- **Après filter-repo** : re-vérifier avec les commandes d'audit (grep keystore|jks|password|secret|...) pour confirmer qu'il ne reste rien.
+
+### Fix du bug lint (prérequis CI)
+- **Root cause confirmée** : AGP 8.7.x exécute le lint jar de lifecycle compilé contre une ancienne Kotlin Analysis API où `KaCallableMemberCall` était une classe ; JetBrains l'a changé en interface → `IncompatibleClassChangeError`
+- **Fix one-liner** : ajouter dans `app/build.gradle.kts` dans le bloc `android {}` :
+  ```kotlin
+  lint {
+      disable += "NullSafeMutableLiveData"
+  }
+  ```
+- Ne PAS tenter de bumper AGP/Kotlin pour fixer ça — le fix officiel viendra d'un futur AGP.
 
 ### Claude's Discretion
 - Le wording exact du README (ton, phrases)
