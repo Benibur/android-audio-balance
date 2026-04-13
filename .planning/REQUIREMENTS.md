@@ -24,8 +24,8 @@ Requirements for v1.1 milestone. Each maps to roadmap phases.
 
 ### Open Source
 
-- [ ] **OSS-01**: GitHub repo `Benibur/android-audio-balance` created with MIT license
-- [ ] **OSS-02**: README with app description, Android 8+ requirement, build instructions, session 0 warning
+- [x] **OSS-01**: GitHub repo `Benibur/android-audio-balance` created with MIT license
+- [x] **OSS-02**: README with app description, Android 8+ requirement, build instructions, session 0 warning
 - [ ] **OSS-03**: Git history audited for secrets before first public push
 
 ## Future Requirements
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FAQ-02 | Phase 5 | Complete |
 | FAQ-03 | Phase 5 | Complete |
 | FAQ-04 | Phase 5 | Complete |
-| OSS-01 | Phase 6 | Pending |
-| OSS-02 | Phase 6 | Pending |
+| OSS-01 | Phase 6 | Complete |
+| OSS-02 | Phase 6 | Complete |
 | OSS-03 | Phase 6 | Pending |
 
 **Coverage:**
