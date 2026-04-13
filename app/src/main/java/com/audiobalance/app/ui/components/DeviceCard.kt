@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material3.ElevatedCard
@@ -144,12 +146,15 @@ fun DeviceCard(
             ) {
                 Text(
                     text = stringResource(R.string.slider_label_left),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(32.dp)
                 )
 
                 // Convert -100..+100 to 0..1 for Slider API
                 val sliderValue = (device.balance + 100f) / 200f
+                val centerTickColor = MaterialTheme.colorScheme.onSurface
 
                 Slider(
                     value = sliderValue,
@@ -162,13 +167,29 @@ fun DeviceCard(
                     },
                     enabled = device.autoApplyEnabled,
                     valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .drawWithContent {
+                            drawContent()
+                            val tickHeight = 14.dp.toPx()
+                            val tickStroke = 2.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            drawLine(
+                                color = centerTickColor,
+                                start = Offset(cx, cy - tickHeight / 2f),
+                                end = Offset(cx, cy + tickHeight / 2f),
+                                strokeWidth = tickStroke
+                            )
+                        }
                 )
 
                 Text(
                     text = stringResource(R.string.slider_label_right),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(32.dp)
                 )
             }
 
@@ -201,8 +222,10 @@ fun DeviceCard(
             ) {
                 Text(
                     text = "-12",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(32.dp)
                 )
 
                 // Convert -12..0 dB to 0..1 for Slider API
@@ -225,8 +248,10 @@ fun DeviceCard(
 
                 Text(
                     text = "0",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(32.dp)
                 )
             }
         }
