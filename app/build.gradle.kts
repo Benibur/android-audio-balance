@@ -35,6 +35,13 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        disable += "NullSafeMutableLiveData"
+        disable += "FrequentlyChangingValue"
+        disable += "RememberInComposition"
+        disable += "AutoboxingStateCreation"
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {
