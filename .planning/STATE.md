@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Gain Offset + FAQ + Open Source
 status: unknown
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-04-13T08:28:50.118Z"
+stopped_at: Completed 06-open-source plan 01 (lint fix + CI workflow)
+last_updated: "2026-04-13T08:31:15.047Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -43,6 +43,8 @@ Recent decisions affecting current work:
 - [Phase 05-faq-screen]: faq_expand_description and faq_collapse_description added as separate strings (21 total) to satisfy UI-SPEC Accessibility Contract per-state contentDescriptions
 - [Phase 05-faq-screen]: launchSingleTop = true on FAQ navigate() call prevents duplicate back-stack entries from rapid taps
 - [Phase 06]: docs/screenshots/.gitkeep placeholder committed so README image references are tracked before Plan 03 delivers real screenshots
+- [Phase 06-open-source]: Disabled 4 Compose/lifecycle lint checks (NullSafeMutableLiveData, FrequentlyChangingValue, RememberInComposition, AutoboxingStateCreation) — all share AGP 8.7.3 + Kotlin 2.x KaCallableMemberCall incompatibility
+- [Phase 06-open-source]: Added lint-baseline.xml for 9 pre-existing MissingPermission/NewApi errors — keeps lint signal for new code while CI starts green
 
 ### Pending Todos
 
@@ -55,6 +57,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T08:28:50.115Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-04-13T08:31:15.043Z
+Stopped at: Completed 06-open-source plan 01 (lint fix + CI workflow)
 Resume file: None
