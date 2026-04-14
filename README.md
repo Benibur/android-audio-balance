@@ -1,3 +1,5 @@
+<img src="docs/icon/icon-192.png" alt="Audio Balance icon" align="right" width="128" height="128" />
+
 # Android Audio Balance
 
 *Fix left/right audio imbalance on your Bluetooth headphones*
