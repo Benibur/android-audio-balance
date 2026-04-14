@@ -1,4 +1,4 @@
-<img src="docs/icon/icon-192.png" alt="Audio Balance icon" align="right" width="128" height="128" />
+<img src="docs/icon/icon-192.png" alt="Audio Balance icon" align="right" width="56" height="56" />
 
 # Android Audio Balance
 
