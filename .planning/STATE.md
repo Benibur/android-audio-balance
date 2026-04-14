@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Gain Offset + FAQ + Open Source
 status: unknown
 stopped_at: Completed 06-04 fully — smoke test approved by user, README icon follow-up committed (4edfc95, 6c4913b). Phase 06 complete. Milestone v1.1 shipped.
-last_updated: "2026-04-14T16:53:21.059Z"
+last_updated: "2026-04-14T16:58:52.871Z"
 progress:
   total_phases: 3
   completed_phases: 3
