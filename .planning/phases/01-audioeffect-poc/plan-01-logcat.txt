@@ -1,0 +1,12 @@
+--------- beginning of main
+04-05 11:56:45.990  8521  8521 W POC     : applyBalance called but no effect
+04-05 11:56:48.622  8521  8521 W POC     : applyBalance called but no effect
+04-05 11:56:50.806  8521  8521 W POC     : applyBalance called but no effect
+04-05 11:56:58.655  8521  8521 D POC     : InternalAudioSource prepared, sessionId=15521
+04-05 11:56:58.687  8521  8521 D POC     : DynamicsProcessing session=15521 created OK, setEnabled=0 hasControl=true
+04-05 11:57:01.261  8521  8521 D POC     : Balance applied: L=0.0dB R=-60.0dB
+04-05 11:57:03.349  8521  8521 D POC     : Balance applied: L=-60.0dB R=0.0dB
+04-05 11:57:05.066  8521  8521 D POC     : Balance applied: L=0.0dB R=0.0dB
+04-05 11:57:08.207  8521  8521 D POC     : Balance applied: L=0.0dB R=-60.0dB
+04-05 11:57:10.424  8521  8521 D POC     : Balance applied: L=-60.0dB R=0.0dB
+04-05 11:57:12.305  8521  8521 D POC     : Balance applied: L=0.0dB R=0.0dB

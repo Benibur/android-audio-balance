@@ -1,5 +1,15 @@
 # Milestones
 
+## v1.1 Gain Offset + FAQ + Open Source (Shipped: 2026-04-14)
+
+**Phases completed:** 3 phases, 8 plans, 3 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v1.0 MVP (Shipped: 2026-04-07)
 
 **Phases:** 4 | **Plans:** 12 | **Commits:** 85 | **LOC:** 1,718 Kotlin (21 files)
