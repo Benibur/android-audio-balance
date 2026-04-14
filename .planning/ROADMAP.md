@@ -67,7 +67,7 @@ Plans:
   1. The repo `github.com/Benibur/android-audio-balance` is publicly accessible with MIT LICENSE file present
   2. The README describes what the app does, the Android 8+ requirement, how to build and sideload via ADB, and the session 0 AudioEffect limitation
   3. The git history contains no secrets — no `.jks`, `keystore.properties`, or sensitive local config files are reachable via any commit
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Wave 1 · autonomous · Lint fix (app/build.gradle.kts) + CI workflow (.github/workflows/build.yml)
@@ -85,4 +85,4 @@ Plans:
 | 3. UI | v1.0 | 4/4 | Complete | 2026-04-06 |
 | 4. Gain Offset | 2/2 | Complete   | 2026-04-12 | - |
 | 5. FAQ Screen | 2/2 | Complete   | 2026-04-12 | - |
-| 6. Open Source | 2/4 | In Progress|  | - |
+| 6. Open Source | 3/4 | In Progress|  | - |

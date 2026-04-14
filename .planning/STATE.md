@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Gain Offset + FAQ + Open Source
 status: unknown
-stopped_at: Completed 06-open-source plan 01 (lint fix + CI workflow)
+stopped_at: Completed 06-open-source plan 03 (history rewrite + branch rename)
 last_updated: "2026-04-13T08:31:15.047Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-07)
 ## Current Position
 
 Phase: 06 (open-source) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Accumulated Context
 
@@ -45,6 +45,8 @@ Recent decisions affecting current work:
 - [Phase 06]: docs/screenshots/.gitkeep placeholder committed so README image references are tracked before Plan 03 delivers real screenshots
 - [Phase 06-open-source]: Disabled 4 Compose/lifecycle lint checks (NullSafeMutableLiveData, FrequentlyChangingValue, RememberInComposition, AutoboxingStateCreation) — all share AGP 8.7.3 + Kotlin 2.x KaCallableMemberCall incompatibility
 - [Phase 06-open-source]: Added lint-baseline.xml for 9 pre-existing MissingPermission/NewApi errors — keeps lint signal for new code while CI starts green
+- [Phase 06 plan 03]: Screenshots reduced from 4 to 2 — device-card-expanded dropped (no expand/collapse UI), permissions dropped (redundant with Android conventions); user decision
+- [Phase 06 plan 03]: git filter-repo --force rewrote all 134 commits to remove local.properties; 133 commits remain on branch main
 
 ### Pending Todos
 
@@ -57,6 +59,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T08:31:15.043Z
-Stopped at: Completed 06-open-source plan 01 (lint fix + CI workflow)
+Last session: 2026-04-14T00:00:00Z
+Stopped at: Completed 06-open-source plan 03 (history rewrite + branch rename)
 Resume file: None
