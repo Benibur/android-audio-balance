@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 680 420"
+   role="img"
+   version="1.1"
+   id="svg35"
+   sodipodi:docname="icon-master.svg"
+   inkscape:version="1.4.3 (fcd0343856, 2026-01-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview35"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="2.1047619"
+     inkscape:cx="340.181"
+     inkscape:cy="133.9819"
+     inkscape:window-width="1920"
+     inkscape:window-height="1131"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg35" />
+  <title
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="title1">Audio Balance Mobile Icon</title>
+  <desc
+     style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="desc1">Icône mobile sobre pour application audio balance</desc>
+  <defs
+     id="defs6">
+    <linearGradient
+       id="bgMob"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0%"
+         stop-color="#0f1923"
+         id="stop1" />
+      <stop
+         offset="100%"
+         stop-color="#1a2a3a"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       id="lG"
+       x1="0"
+       y1="1"
+       x2="0"
+       y2="0">
+      <stop
+         offset="0%"
+         stop-color="#1e88e5"
+         id="stop3" />
+      <stop
+         offset="100%"
+         stop-color="#64b5f6"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="rG"
+       x1="0"
+       y1="1"
+       x2="0"
+       y2="0">
+      <stop
+         offset="0%"
+         stop-color="#00897b"
+         id="stop5" />
+      <stop
+         offset="100%"
+         stop-color="#4db6ac"
+         id="stop6" />
+    </linearGradient>
+  </defs>
+  <!-- Icône fond arrondi style iOS/Android -->
+  <rect
+     x="215"
+     y="30"
+     width="250"
+     height="250"
+     rx="56"
+     fill="url(#bgMob)"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect6"
+     inkscape:label="fond" />
+  <!-- Reflet subtil haut -->
+  <!-- Barres gauche — 3 barres, hauteurs sobres -->
+  <rect
+     x="244"
+     y="128"
+     width="16"
+     height="84"
+     rx="4"
+     fill="url(#lG)"
+     opacity="0.55"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.55;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect8" />
+  <rect
+     x="266"
+     y="108"
+     width="16"
+     height="104"
+     rx="4"
+     fill="url(#lG)"
+     opacity="0.85"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.85;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect9" />
+  <rect
+     x="288"
+     y="120"
+     width="16"
+     height="92"
+     rx="4"
+     fill="url(#lG)"
+     opacity="0.65"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.65;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect10" />
+  <!-- Séparateur central -->
+  <rect
+     x="330"
+     y="95"
+     width="2"
+     height="120"
+     rx="1"
+     fill="#ffffff"
+     opacity="0.08"
+     style="fill:rgb(255, 255, 255);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.08;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect11" />
+  <!-- Curseur de balance — sobre, centré -->
+  <rect
+     x="321"
+     y="188"
+     width="20"
+     height="24"
+     rx="5"
+     fill="#cfd8dc"
+     style="fill:rgb(207, 216, 220);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect12" />
+  <rect
+     x="325"
+     y="196"
+     width="12"
+     height="1.5"
+     rx="1"
+     fill="#607d8b"
+     style="fill:rgb(96, 125, 139);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect13" />
+  <rect
+     x="325"
+     y="201"
+     width="12"
+     height="1.5"
+     rx="1"
+     fill="#607d8b"
+     style="fill:rgb(96, 125, 139);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect14" />
+  <!-- Barres droite — 3 barres -->
+  <rect
+     x="358"
+     y="122"
+     width="16"
+     height="90"
+     rx="4"
+     fill="url(#rG)"
+     opacity="0.65"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.65;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect15" />
+  <rect
+     x="380"
+     y="106"
+     width="16"
+     height="106"
+     rx="4"
+     fill="url(#rG)"
+     opacity="0.85"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.85;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect16" />
+  <rect
+     x="402"
+     y="130"
+     width="16"
+     height="82"
+     rx="4"
+     fill="url(#rG)"
+     opacity="0.55"
+     style="stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.55;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="rect17" />
+  <!-- Ligne de sol -->
+  <line
+     x1="238"
+     y1="226"
+     x2="424"
+     y2="226"
+     stroke="#ffffff"
+     stroke-width="0.6"
+     opacity="0.07"
+     style="fill:rgb(0, 0, 0);stroke:rgb(255, 255, 255);color:rgb(0, 0, 0);stroke-width:0.6px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.07;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"
+     id="line17" />
+  <!-- Affichage des 3 tailles sous l'icône pour référence -->
+  <!-- iOS style 60pt -->
+  <!-- 40pt -->
+  <!-- 20pt -->
+</svg>
