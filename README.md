@@ -12,11 +12,9 @@ Many Bluetooth headphones produce noticeably different volume levels on the left
 
 Android Audio Balance solves this by letting you set a custom left/right balance and gain offset for each Bluetooth device. When you connect your headphones, the app automatically applies your saved settings using Android's `AudioEffect` DynamicsProcessing API — no manual adjustment needed every time.
 
-| Device list | Device card expanded |
+| Device list | FAQ |
 |---|---|
-| ![Device list](docs/screenshots/device-list.png) | ![Device card expanded](docs/screenshots/device-card-expanded.png) |
-| **FAQ** | **Permissions** |
-| ![FAQ](docs/screenshots/faq.png) | ![Permissions](docs/screenshots/permissions.png) |
+| ![Device list](docs/screenshots/device-list.png) | ![FAQ](docs/screenshots/faq.png) |
 
 ## Requirements
 
