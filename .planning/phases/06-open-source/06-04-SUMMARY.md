@@ -31,6 +31,7 @@ key-decisions:
   - "APK built from git checkout v1.1 (detached HEAD) then returned to main — guarantees upload matches tagged source exactly"
   - "git push --tags origin used explicitly (--all does not push tags) — both v1.0 and v1.1 now on origin"
   - "gh release create with --notes-file CHANGELOG.md — full changelog as release body, no custom notes needed"
+  - "Follow-up: app icon added to README header (right-aligned, 56x56) for visual identity after smoke-test approval"
 
 patterns-established:
   - "Release pattern: tag annotated → checkout tag → gradlew clean assembleDebug → gh release create → checkout main"
@@ -44,15 +45,15 @@ completed: 2026-04-14
 
 # Phase 06 Plan 04: Go Public — Repo + Release Summary
 
-**Public repo Benibur/android-audio-balance shipped: full history on origin/main, v1.1 annotated tag, GitHub Release with SHA256-verified debug APK (19.2 MB) built reproducibly from the tagged commit.**
+**Public repo Benibur/android-audio-balance shipped: full history on origin/main, v1.1 annotated tag, GitHub Release with SHA256-verified debug APK (19.2 MB), incognito smoke test confirmed, and README icon added post-approval.**
 
 ## Performance
 
-- **Duration:** ~25 min
+- **Duration:** ~25 min (core) + post-approval follow-up commits
 - **Started:** 2026-04-14T15:55:00Z
 - **Completed:** 2026-04-14T16:10:00Z
-- **Tasks:** 3 of 4 (Task 4 is incognito smoke-test checkpoint awaiting user)
-- **Files modified:** 0 (all changes were git/GitHub operations, not source changes)
+- **Tasks:** 4 of 4 (all complete including incognito smoke test checkpoint)
+- **Files modified:** 1 (README.md — icon follow-up)
 
 ## Accomplishments
 
@@ -62,20 +63,27 @@ completed: 2026-04-14
 - Built fresh debug APK from the v1.1-tagged commit (`./gradlew clean assembleDebug` in detached HEAD state) — SHA256 `df2150a1968c504783230d5dabf53a9ed86e0e09794ac8234044fa90f381397d`
 - Created GitHub Release `v1.1 — Initial Public Release` with APK as downloadable asset; re-downloaded and confirmed SHA256 match (upload integrity verified)
 - Android CI workflow triggered automatically on push — status: in_progress at plan close
+- User confirmed all 8 incognito smoke-test checkpoints passed (Task 4 checkpoint approved)
+- Follow-up: app icon (56×56) added to README header — commit 4edfc95 (icon added), 6c4913b (icon resized 128→56)
 
 ## Task Commits
 
 Tasks 2 and 3 are git/GitHub operational tasks (push, tag, release) — no source code commits were made. All commits were pre-existing history from prior plans.
 
 Key operations:
-1. **Task 2: Repo creation + push** — `gh repo create`, `git push --all origin`, `git push --tags origin`, `gh repo edit --add-topic` (x7)
-2. **Task 3: Tag + APK build + release** — `git checkout v1.1`, `./gradlew clean assembleDebug`, `gh release create v1.1`, `git checkout main`
+1. **Task 1: Pre-flight gate** — checkpoint approved by user ("go public"); gh auth status confirmed as Benibur
+2. **Task 2: Repo creation + push** — `gh repo create`, `git push --all origin`, `git push --tags origin`, `gh repo edit --add-topic` (x7)
+3. **Task 3: Tag + APK build + release** — `git checkout v1.1`, `./gradlew clean assembleDebug`, `gh release create v1.1`, `git checkout main`
+4. **Task 4: Incognito smoke test** — checkpoint approved by user ("public smoke test passed"); all 8 checks confirmed
 
-**Plan metadata commit:** see final commit in this execution.
+**Follow-up commit 1 (icon added):** `4edfc95` — docs: add app icon to README header (right-aligned)
+**Follow-up commit 2 (icon resized):** `6c4913b` — docs: shrink README icon to title line height (56x56)
+
+**Plan metadata commit:** `6118de9` — docs(06-04): complete go-public plan — repo live, release v1.1 published
 
 ## Files Created/Modified
 
-None — this plan is pure GitHub/git operations. Source files were finalized in plans 06-01 through 06-03.
+- `README.md` — app icon added to header in two follow-up commits (4edfc95, 6c4913b)
 
 ## Decisions Made
 
@@ -85,7 +93,16 @@ None — this plan is pure GitHub/git operations. Source files were finalized in
 
 ## Deviations from Plan
 
-None — plan executed exactly as written. All steps matched the PLAN.md sequence. The v1.0 tag being pushed alongside v1.1 was expected (pre-existing tag from prior milestones).
+Core plan executed exactly as written. All steps matched the PLAN.md sequence. The v1.0 tag being pushed alongside v1.1 was expected (pre-existing tag from prior milestones).
+
+### Post-approval Follow-up (outside plan scope)
+
+**[Follow-up] README icon sizing — two commits after smoke test approval**
+- **Found during:** Post Task 4 follow-up
+- **4edfc95:** Added app icon to README header (right-aligned, initially 128×128)
+- **6c4913b:** Shrunk icon from 128×128 to 56×56 to match title line height
+- **Files modified:** README.md
+- **Impact:** Cosmetic improvement to README header; no change to repo configuration, release, or CI
 
 ## Issues Encountered
 
@@ -113,7 +130,9 @@ None.
 
 ## Next Phase Readiness
 
-Phase 6 awaiting Task 4: incognito smoke test by user. Once "public smoke test passed" signal received, OSS-01 is fully satisfied and Phase 6 is complete.
+Phase 6 is complete. OSS-01 fully satisfied. Milestone v1.1 shipped.
+
+Potential v1.2 deferred items (from Deferred Items list above) are the only open threads.
 
 ---
 *Phase: 06-open-source*
